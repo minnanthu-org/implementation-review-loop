@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-loop.local/schemas/plan-review-output.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "conclusion",
+    "summaryMd",
+    "findings",
+    "impactReviewMd",
+    "checksReviewMd",
+    "humanJudgementMd",
+    "reReviewConditionMd"
+  ],
+  "properties": {
+    "conclusion": {
+      "type": "string",
+      "enum": ["approve", "needs-fix", "needs-human"]
+    },
+    "summaryMd": {
+      "type": "string",
+      "minLength": 1
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "type", "severity", "contentMd", "suggestedFixMd"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "type": {
+            "type": "string",
+            "enum": ["scope", "risk", "missing-check", "ambiguity"]
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["low", "medium", "high"]
+          },
+          "contentMd": {
+            "type": "string",
+            "minLength": 1
+          },
+          "suggestedFixMd": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "impactReviewMd": {
+      "type": "string",
+      "minLength": 1
+    },
+    "checksReviewMd": {
+      "type": "string",
+      "minLength": 1
+    },
+    "humanJudgementMd": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reReviewConditionMd": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

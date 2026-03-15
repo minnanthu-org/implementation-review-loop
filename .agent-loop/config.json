@@ -1,0 +1,16 @@
+{
+  "configVersion": 1,
+  "plansDir": "docs/implementation-plans",
+  "reviewsDir": "docs/plan-reviews",
+  "runDir": ".loop/runs",
+  "maxAttempts": 3,
+  "prompts": {
+    "implementer": ".agent-loop/prompts/implementer.md",
+    "reviewer": ".agent-loop/prompts/code-reviewer.md"
+  },
+  "checksFile": ".agent-loop/checks.json",
+  "execution": {
+    "mode": "compat-loop",
+    "provider": "codex"
+  }
+}

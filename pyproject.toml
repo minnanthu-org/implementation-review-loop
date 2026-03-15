@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent-loop"
+version = "0.1.0"
+description = "AI agent loop for structured code review and implementation workflows"
+requires-python = ">=3.11"
+dependencies = [
+    "click>=8.1",
+    "pydantic>=2.0",
+]
+
+[project.scripts]
+agent-loop = "agent_loop.cli.main:cli"
+
+[tool.hatch.build.targets.wheel]
+packages = ["skills/implementation-review-loop/src/agent_loop"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.mypy]
+strict = true
+packages = ["agent_loop"]
+mypy_path = "skills/implementation-review-loop/src"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.0",
+    "pytest>=8.0",
+]

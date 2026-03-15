@@ -1,0 +1,9 @@
+{
+  "configVersion": 1,
+  "plansDir": "docs/implementation-plans",
+  "reviewsDir": "docs/plan-reviews",
+  "execution": {
+    "mode": "delegated",
+    "provider": "codex"
+  }
+}

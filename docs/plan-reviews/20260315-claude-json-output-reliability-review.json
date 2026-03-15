@@ -1,0 +1,24 @@
+{
+  "conclusion": "needs-fix",
+  "summaryMd": "前回レビューの 4 件中 3 件（タイムアウト旧値テーブル、リトライ回数と外側タイムアウトの算術矛盾、code-review.ts のスコープ漏れ）は適切に修正されている。残り 1 件（`extractJson` の export）が未対応のまま Step 4 に残っている。加えて、Step 3 で変更する `run-loop.ts` と `code-review.ts` がセクション 3（変更対象）のファイル一覧に記載されていない不整合がある。いずれも軽微な修正で解消可能。",
+  "findings": [
+    {
+      "id": "section3-missing-files",
+      "type": "ambiguity",
+      "severity": "medium",
+      "contentMd": "セクション 3（変更対象）は `claude.ts` と `structured-prompt.ts` のみを挙げているが、Step 3 では `run-loop.ts`（`DEFAULT_AGENT_COMMAND_TIMEOUT_MS` を `600_000` → `1_500_000`）と `code-review.ts`（`480_000` → `1_500_000`）を直接変更する。セクション 8（必須確認項目）にはこれらが「整合性確認」として記載されているが、「確認対象」と「変更対象」は意味が異なる。実装者がセクション 3 をスコープの正としてファイル一覧を確認した場合、2 ファイルの変更が漏れるリスクがある。",
+      "suggestedFixMd": "セクション 3 に以下を追加する:\n- `packages/agent-loop-core/src/run-loop.ts` — `DEFAULT_AGENT_COMMAND_TIMEOUT_MS` の引き上げ\n- `packages/agent-loop-cli/src/code-review.ts` — `DEFAULT_AGENT_COMMAND_TIMEOUT_MS` の引き上げ\n\n逆に `structured-prompt.ts` は実際には変更しないため「（変更不要だが確認）」のようにセクション 8 側に移すか、セクション 3 内で「変更なし、インターフェース互換性の確認のみ」と明記する。"
+    },
+    {
+      "id": "extract-json-not-exported",
+      "type": "missing-check",
+      "severity": "low",
+      "contentMd": "前回レビューの finding `extract-json-not-exported` が未対応。Step 4 は `extractJson` のユニットテスト（raw JSON、コードブロック付き、テキスト混在、JSON なし）を要求しているが、`claude.ts:64` の `extractJson` はモジュール内 private 関数のまま。export しなければ直接テストできない。",
+      "suggestedFixMd": "以下のいずれかを Step 1 または Step 4 に明記する:\n(A) `extractJson` を named export に変更してユニットテストで直接検証する\n(B) `extractJson` は export せず、`runStructuredClaudePrompt` の統合テスト（`runShellCommand` をモック）経由で間接的に検証する方針とし、Step 4 のテスト記述をその旨に修正する"
+    }
+  ],
+  "impactReviewMd": "前回指摘の `code-review.ts` スコープ漏れが解消され、影響範囲の分析は実態と一致するようになった。`runStructuredClaudePrompt` を呼ぶ全コードパス（`structured-prompt.ts` → `workflow-agent.ts` → `run-loop.ts` / `code-review.ts`）が正しく列挙されている。Gemini / Codex への非影響は `structured-prompt.ts` のプロバイダー分岐で確認済み。タイムアウト構造（内側 600s × 最大 2 回 = 1,200s < 外側 1,500s）の算術も正しい。`--output-format text` の正式採用は既に動作中の未コミット変更の追認であり、リスクは低い。セクション 3 のファイル一覧と実際の変更ファイルの不一致（finding `section3-missing-files`）は影響範囲の認識には実害がないが、計画書の一貫性として修正が望ましい。",
+  "checksReviewMd": "`npm run build` と `npm test` を必須 checks に指定しており、ビルドエラーの検出は十分。テスト基盤は vitest が root `package.json` に設定済み（`vitest run --passWithNoTests`）であり、テストファイルを追加すれば自動的に実行される。ただし現時点でテストファイルが存在しないため `--passWithNoTests` でテスト未実行のまま checks を通過する。Step 4 のテスト追加が受け入れ条件に含まれているので、テストが実際に書かれて実行されることが担保される。受け入れ条件はリトライの正常系・異常系・ログ出力・タイムアウト算術を網羅しており十分。",
+  "humanJudgementMd": "人間判断を要する前提衝突や大きな方針判断は見当たらない。2 件の finding はいずれも計画書の文面修正で解決可能であり、設計方針の変更は不要。リトライ回数（最大 2 回実行）、タイムアウト値、`--output-format text` の採用はいずれも技術的に妥当な判断。",
+  "reReviewConditionMd": "上記 2 件の finding（`section3-missing-files` と `extract-json-not-exported`）を修正した版が提出された場合に再レビューする。タイムアウト値やリトライ回数が変更された場合は算術の整合性を再確認する。"
+}

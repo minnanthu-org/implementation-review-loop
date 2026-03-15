@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-loop.local/schemas/code-review-output.schema.json",
+  "title": "CodeReviewOutput",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "verdict",
+    "summaryMd",
+    "findings"
+  ],
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "approve",
+        "fix",
+        "replan",
+        "human"
+      ]
+    },
+    "summaryMd": {
+      "type": "string",
+      "minLength": 1
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "severity",
+          "status",
+          "summaryMd",
+          "suggestedActionMd"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "closed"
+            ]
+          },
+          "summaryMd": {
+            "type": "string",
+            "minLength": 1
+          },
+          "suggestedActionMd": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

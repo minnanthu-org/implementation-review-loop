@@ -1,0 +1,31 @@
+{
+  "conclusion": "needs-fix",
+  "summaryMd": "計画書がテンプレートのプレースホルダーのままになっており、具体的な実装内容や目的が不明確です。リポジトリ設定の JSON は含まれていますが、それをどのように適用するか（ファイルの新規作成か更新かなど）が記載されていません。",
+  "findings": [
+    {
+      "id": "placeholder-content",
+      "type": "ambiguity",
+      "severity": "high",
+      "contentMd": "目的、背景、実装方針、実装手順などの主要なセクションが「〜を 2〜5 行で書く」といったテンプレートの指示文のままになっています。",
+      "suggestedFixMd": "具体的なプロジェクトの状況に合わせて、目的、背景、および実装の詳細を記述してください。"
+    },
+    {
+      "id": "missing-targets",
+      "type": "scope",
+      "severity": "high",
+      "contentMd": "変更対象ファイルが `path/to/file-a` のようなプレースホルダーになっており、どのファイルが操作されるのかが特定できません。",
+      "suggestedFixMd": "`.agent-loop/config.json` などの実際に作成・変更するファイルパスを明記してください。"
+    },
+    {
+      "id": "vague-steps",
+      "type": "ambiguity",
+      "severity": "medium",
+      "contentMd": "実装手順が抽象的で、どのような操作をどの順番で行うべきかが具体化されていません。",
+      "suggestedFixMd": "「1. .agent-loop ディレクトリを作成する」「2. config.json を指定のパスに書き込む」といった、Implementer が迷わず実行できる手順を記述してください。"
+    }
+  ],
+  "impactReviewMd": "変更対象や影響範囲が具体的に記載されていないため、現状のコードベースや他のワークフローへの影響を正確に評価することができません。",
+  "checksReviewMd": "必須 checks が `npm run build` と `npm test` のテンプレートのままです。今回の設定変更を検証するために必要な、設定ファイルのバリデーションチェックなどの具体的な項目を追加検討してください。",
+  "humanJudgementMd": "実装に入る前に、計画書の各セクションを具体的に埋める必要があります。特に、リポジトリ設定 JSON をどのファイルとして保存するのか、既存の設定がある場合にどう扱うのかを明文化してください。",
+  "reReviewConditionMd": "すべてのプレースホルダーが具体的な内容で書き換えられ、変更対象ファイルと手順が明確になった状態で再レビューを依頼してください。"
+}

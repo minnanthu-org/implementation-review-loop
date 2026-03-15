@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-loop.local/schemas/implementer-output.schema.json",
+  "title": "ImplementerOutput",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "attempt",
+    "summaryMd",
+    "changedFiles",
+    "checksRun",
+    "responses",
+    "replanRequired"
+  ],
+  "properties": {
+    "attempt": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "summaryMd": {
+      "type": "string",
+      "minLength": 1
+    },
+    "changedFiles": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "checksRun": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "responses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "findingId",
+          "responseType",
+          "noteMd"
+        ],
+        "properties": {
+          "findingId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "responseType": {
+            "type": "string",
+            "enum": [
+              "fixed",
+              "not-fixed",
+              "not-a-bug",
+              "needs-replan",
+              "need-more-context"
+            ]
+          },
+          "noteMd": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "replanRequired": {
+      "type": "boolean"
+    }
+  }
+}
