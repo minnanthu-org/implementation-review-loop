@@ -1,4 +1,4 @@
-"""Default agent command generation — matching agent-commands.ts."""
+"""Default agent command generation."""
 
 from __future__ import annotations
 

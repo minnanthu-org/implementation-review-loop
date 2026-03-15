@@ -1,20 +1,24 @@
-"""agent-loop plan review — plan review workflow, matching plan-review.ts."""
+"""agent-loop plan review — plan review workflow."""
 
 from __future__ import annotations
 
 import json
-import re
 import sys
 import tempfile
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 
 import click
 
 from agent_loop.cli.assets import resolve_asset_path
+from agent_loop.cli.formatting import (
+    extract_plan_title,
+    fenced_json,
+    format_provider_display_name,
+    format_tokyo_date,
+)
 from agent_loop.core.contracts import PlanReviewOutput
-from agent_loop.core.process import CommandExecutionResult
+from agent_loop.core.process import ensure_successful_command
 from agent_loop.core.providers.structured_prompt import run_structured_prompt
 from agent_loop.core.repo_config import (
     RepoConfig,
@@ -79,7 +83,7 @@ def run_plan_review(
     output_path = str(Path(temp_dir) / "plan-review-output.json")
 
     reviewer_provider = provider or get_effective_provider(repo_config.execution)
-    reviewer_name = _format_provider_display_name(reviewer_provider)
+    reviewer_name = format_provider_display_name(reviewer_provider)
 
     result = run_structured_prompt(
         command=reviewer_command,
@@ -95,7 +99,7 @@ def run_plan_review(
         schema_path=schema_path,
     )
 
-    _ensure_successful_command("Plan Reviewer", result)
+    ensure_successful_command("Plan Reviewer", result)
 
     output = PlanReviewOutput.model_validate(
         json.loads(Path(output_path).read_text(encoding="utf-8"))
@@ -107,9 +111,9 @@ def run_plan_review(
         render_plan_review_record(
             output=output,
             plan_path=plan_path_relative,
-            review_date=_format_tokyo_date(),
+            review_date=format_tokyo_date(),
             reviewer_name=reviewer_name,
-            title=_extract_plan_title(plan_contents, resolved_plan),
+            title=extract_plan_title(plan_contents, resolved_plan),
         ),
         encoding="utf-8",
     )
@@ -190,7 +194,7 @@ def build_plan_review_prompt(
     repo_config: RepoConfig,
     output_schema: str,
 ) -> str:
-    """Build the plan review prompt — matches ``buildPlanReviewPrompt``."""
+    """Build the plan review prompt."""
     repo_config_json = json.dumps(repo_config.model_dump(), indent=2)
 
     return "\n\n".join([
@@ -200,12 +204,12 @@ def build_plan_review_prompt(
         "## 対象計画書",
         plan_contents.strip(),
         "## Repo 設定 JSON",
-        _fenced_json(repo_config_json),
+        fenced_json(repo_config_json),
         "## 追加指示",
         "必要なら計画書が参照するコード、直近の呼び出し元、関連テスト、既存テンプレートを repo 内で読んでください。\n"
         "コード変更は行わず、計画の妥当性だけを評価してください。",
         "## 出力 JSON Schema",
-        _fenced_json(output_schema),
+        fenced_json(output_schema),
         "\n".join([
             "## [重要] 出力形式",
             "",
@@ -227,47 +231,8 @@ def _validate_plan_review_output(output: PlanReviewOutput) -> None:
         raise ValueError("Plan Reviewer must report findings on needs-fix")
 
 
-def _extract_plan_title(plan_contents: str, plan_path: str) -> str:
-    match = re.search(r"^#\s+(.+)$", plan_contents, re.MULTILINE)
-    if not match:
-        return Path(plan_path).stem
-    heading = match.group(1).strip()
-    return re.sub(r"\s+実装計画書$", "", heading).strip()
-
-
 def _map_conclusion_to_document_status(conclusion: str) -> str:
     return "承認済み" if conclusion == "approve" else "レビュー済み"
-
-
-def _format_tokyo_date() -> str:
-    try:
-        from zoneinfo import ZoneInfo
-
-        now = datetime.now(ZoneInfo("Asia/Tokyo"))
-    except Exception:
-        now = datetime.now(timezone.utc)
-    return now.strftime("%Y-%m-%d")
-
-
-def _fenced_json(value: str) -> str:
-    return f"```json\n{value.strip()}\n```"
-
-
-def _format_provider_display_name(provider: WorkflowProvider) -> str:
-    if provider == WorkflowProvider.CLAUDE:
-        return "Claude"
-    if provider == WorkflowProvider.GEMINI:
-        return "Gemini"
-    return "Codex"
-
-
-def _ensure_successful_command(label: str, result: CommandExecutionResult) -> None:
-    if result.exit_code == 0:
-        return
-    raise RuntimeError(
-        f"{label} command failed with exit code {result.exit_code}: {result.command}\n"
-        + (result.stderr or result.stdout)
-    )
 
 
 @click.command("review")

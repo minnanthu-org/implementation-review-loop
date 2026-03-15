@@ -1,22 +1,24 @@
-"""agent-loop code review — one-shot code review workflow, matching code-review.ts."""
+"""agent-loop code review — one-shot code review workflow."""
 
 from __future__ import annotations
 
 import json
 import os
-import re
 import sys
 import tempfile
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 
 import click
 
 from agent_loop.cli.agent_commands import default_reviewer_command
 from agent_loop.cli.assets import resolve_asset_path
+from agent_loop.cli.formatting import (
+    extract_plan_title,
+    format_provider_display_name,
+    format_tokyo_date,
+)
 from agent_loop.core.checks import (
-    AttemptCheckResults,
     CheckResult,
     resolve_configured_check_commands,
     run_checks,
@@ -26,11 +28,15 @@ from agent_loop.core.nested_workflow_guard import (
     assert_no_nested_workflow_invocation,
     build_workflow_command_environment,
 )
-from agent_loop.core.process import CommandExecutionResult, run_shell_command
+from agent_loop.core.process import (
+    ensure_successful_command,
+    run_shell_command,
+)
 from agent_loop.core.repo_config import (
     WorkflowProvider,
     load_compat_loop_repo_config,
 )
+from agent_loop.core.run_loop.io import write_json
 
 DEFAULT_REVIEWER_NAME = "Codex"
 DEFAULT_REVIEW_OUTPUT_DIR = str(Path("docs") / "implementation-reviews")
@@ -108,8 +114,8 @@ def run_code_review(
         )
 
     plan_contents = Path(resolved_plan).read_text(encoding="utf-8")
-    review_date = _format_tokyo_date()
-    reviewer_name = _format_provider_display_name(reviewer_provider)
+    review_date = format_tokyo_date()
+    reviewer_name = format_provider_display_name(reviewer_provider)
     plan_path_relative = str(
         Path(resolved_plan).relative_to(resolved_repo)
     ).replace("\\", "/")
@@ -117,10 +123,10 @@ def run_code_review(
         plan_path=resolved_plan, repo_path=resolved_repo
     )
 
-    _write_json(finding_ledger_path, [])
-    _write_json(open_findings_path, [])
-    _write_json(checks_path, _build_check_results_for_reviewer(check_results))
-    _write_json(implementer_output_path, {
+    write_json(finding_ledger_path, [])
+    write_json(open_findings_path, [])
+    write_json(checks_path, _build_check_results_for_reviewer(check_results))
+    write_json(implementer_output_path, {
         "attempt": 1,
         "summaryMd": "One-shot code review request.",
         "changedFiles": changed_files,
@@ -160,7 +166,7 @@ def run_code_review(
         timeout_ms=DEFAULT_AGENT_COMMAND_TIMEOUT_MS,
     )
 
-    _ensure_successful_command("Code Reviewer", reviewer_result)
+    ensure_successful_command("Code Reviewer", reviewer_result)
 
     output = CodeReviewOutput.model_validate(
         json.loads(Path(review_output_path).read_text(encoding="utf-8"))
@@ -175,7 +181,7 @@ def run_code_review(
             plan_path=plan_path_relative,
             review_date=review_date,
             reviewer_name=reviewer_name,
-            title=_extract_plan_title(plan_contents, resolved_plan),
+            title=extract_plan_title(plan_contents, resolved_plan),
         ),
         encoding="utf-8",
     )
@@ -269,14 +275,6 @@ def _validate_one_shot_review_output(output: CodeReviewOutput) -> None:
         )
 
 
-def _extract_plan_title(plan_contents: str, plan_path: str) -> str:
-    match = re.search(r"^#\s+(.+)$", plan_contents, re.MULTILINE)
-    if not match:
-        return Path(plan_path).stem
-    heading = match.group(1).strip()
-    return re.sub(r"\s+実装計画書$", "", heading).strip()
-
-
 def _collect_changed_files(
     *,
     plan_path: str,
@@ -355,26 +353,6 @@ def _unquote_git_path(value: str) -> str:
     return value[1:-1].replace("\\\\", "\\").replace('\\"', '"')
 
 
-def _format_tokyo_date() -> str:
-    try:
-        from zoneinfo import ZoneInfo
-
-        now = datetime.now(ZoneInfo("Asia/Tokyo"))
-    except Exception:
-        now = datetime.now(timezone.utc)
-    return now.strftime("%Y-%m-%d")
-
-
-def _format_provider_display_name(provider: WorkflowProvider | None) -> str:
-    if provider == WorkflowProvider.CLAUDE:
-        return "Claude"
-    if provider == WorkflowProvider.GEMINI:
-        return "Gemini"
-    if provider == WorkflowProvider.CODEX:
-        return "Codex"
-    return "Custom Reviewer"
-
-
 def _build_check_results_for_reviewer(
     check_results: list[CheckResult],
 ) -> dict[str, object]:
@@ -404,21 +382,6 @@ def _summarize_check_stream(value: str, ok: bool) -> str:
         )
     return (
         f"{trimmed[:1200]}\n... (truncated)" if len(trimmed) > 1200 else trimmed
-    )
-
-
-def _write_json(file_path: str, value: object) -> None:
-    Path(file_path).write_text(
-        json.dumps(value, indent=2) + "\n", encoding="utf-8"
-    )
-
-
-def _ensure_successful_command(label: str, result: CommandExecutionResult) -> None:
-    if result.exit_code == 0:
-        return
-    raise RuntimeError(
-        f"{label} command failed with exit code {result.exit_code}: {result.command}\n"
-        + (result.stderr or result.stdout)
     )
 
 

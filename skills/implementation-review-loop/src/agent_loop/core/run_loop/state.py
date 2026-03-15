@@ -1,8 +1,7 @@
-"""RunState management — matching the state portion of run-loop.ts."""
+"""RunState management."""
 
 from __future__ import annotations
 
-import os
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -86,13 +85,7 @@ class RunState(BaseModel):
 
 
 @dataclass(frozen=True)
-class InitializedRun:
-    runDir: str
-    state: RunState
-
-
-@dataclass(frozen=True)
-class CompletedRun:
+class RunResult:
     runDir: str
     state: RunState
 
@@ -117,7 +110,7 @@ def create_initial_state(
     runId: str,
     sourcePlanPath: str,
 ) -> RunState:
-    """Create the initial ``RunState`` — matches ``createInitialState`` in TS."""
+    """Create the initial ``RunState``."""
     now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
     return RunState(
@@ -159,7 +152,7 @@ def update_state(
 
 
 def build_run_id(source_plan_path: str, now: datetime) -> str:
-    """Build a run ID from the plan filename and timestamp — matches ``buildRunId``."""
+    """Build a run ID from the plan filename and timestamp."""
     stem = Path(source_plan_path).stem
     plan_base = re.sub(r"[^a-zA-Z0-9]+", "-", stem)
     plan_base = plan_base.strip("-").lower()
@@ -167,18 +160,18 @@ def build_run_id(source_plan_path: str, now: datetime) -> str:
 
 
 def format_timestamp(now: datetime) -> str:
-    """Format a datetime as a compact ISO string — matches ``formatTimestamp``."""
+    """Format a datetime as a compact ISO string."""
     ts = now.replace(microsecond=0)
     return ts.isoformat().replace("-", "").replace(":", "").replace("+00:00", "Z")
 
 
 def format_attempt(attempt: int) -> str:
-    """Zero-pad attempt number to 3 digits — matches ``formatAttempt``."""
+    """Zero-pad attempt number to 3 digits."""
     return str(attempt).zfill(3)
 
 
 def map_verdict_to_status(verdict: ReviewVerdict) -> RunStatus:
-    """Map a review verdict to a run status — matches ``mapVerdictToStatus``."""
+    """Map a review verdict to a run status."""
     mapping = {
         ReviewVerdict.APPROVE: RunStatus.APPROVED,
         ReviewVerdict.REPLAN: RunStatus.NEEDS_REPLAN,

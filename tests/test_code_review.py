@@ -1,4 +1,4 @@
-"""Tests for code_review_cmd — matching code-review.test.ts."""
+"""Tests for code_review_cmd."""
 
 import json
 import os

@@ -1,27 +1,20 @@
-"""Execution summary Markdown generation — matching writeRunSummary in run-loop.ts."""
+"""Execution summary Markdown generation."""
 
 from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING
-
-from pydantic import TypeAdapter
 
 from agent_loop.core.contracts import (
     CodeReviewOutput,
-    FindingLedger,
     FindingLedgerEntry,
 )
 from agent_loop.core.run_loop.io import read_optional_json, read_optional_text
 from agent_loop.core.run_loop.state import RunState, format_attempt
 
-if TYPE_CHECKING:
-    from agent_loop.core.checks import AttemptCheckResults
-
 
 def write_run_summary(run_dir: str, state: RunState) -> None:
-    """Generate and write ``summary.md`` — matches ``writeRunSummary``."""
+    """Generate and write ``summary.md``."""
     latest_attempt_path = (
         str(Path(run_dir) / "attempts" / f"{format_attempt(state.currentAttempt)}.md")
         if state.currentAttempt > 0
@@ -38,12 +31,8 @@ def write_run_summary(run_dir: str, state: RunState) -> None:
         else None
     )
 
-    finding_ledger_adapter: TypeAdapter[list[FindingLedgerEntry]] = TypeAdapter(
-        list[FindingLedgerEntry]
-    )
-
-    finding_ledger_result = _read_optional_validated(
-        state.findingLedgerPath, finding_ledger_adapter, []
+    finding_ledger_result = read_optional_json(
+        state.findingLedgerPath, list[FindingLedgerEntry], []
     )
     latest_attempt_summary = (
         read_optional_text(latest_attempt_path) if latest_attempt_path else None
@@ -151,23 +140,8 @@ def write_run_summary(run_dir: str, state: RunState) -> None:
 
 
 def single_line(value: str) -> str:
-    """Collapse whitespace to a single space — matches ``singleLine``."""
+    """Collapse whitespace to a single space."""
     return re.sub(r"\s+", " ", value).strip()
-
-
-def _read_optional_validated(
-    file_path: str,
-    adapter: TypeAdapter[list[FindingLedgerEntry]],
-    fallback: list[FindingLedgerEntry],
-) -> list[FindingLedgerEntry]:
-    """Read and validate JSON list via TypeAdapter, with fallback on missing file."""
-    import json
-
-    try:
-        raw = json.loads(Path(file_path).read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        return fallback
-    return adapter.validate_python(raw)
 
 
 def _read_optional_checks(file_path: str) -> dict[str, object] | None:

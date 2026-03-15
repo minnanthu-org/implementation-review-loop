@@ -1,4 +1,4 @@
-"""Repository health check — matching doctor.ts."""
+"""Repository health check."""
 
 from __future__ import annotations
 

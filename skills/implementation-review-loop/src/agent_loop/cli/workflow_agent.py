@@ -1,4 +1,4 @@
-"""agent-loop agent run — unified workflow agent, matching workflow-agent.ts + {claude,codex,gemini}-agent.ts."""
+"""agent-loop agent run — unified workflow agent."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from typing import Literal
 
 import click
 
+from agent_loop.cli.formatting import fenced_json
 from agent_loop.core.providers.structured_prompt import run_structured_prompt
 from agent_loop.core.repo_config import WorkflowProvider
 
@@ -107,17 +108,17 @@ def build_prompt(role: AgentRole, context: AgentContext) -> str:
         "## 承認済み計画書",
         approved_plan.strip(),
         "## Finding Ledger JSON",
-        _fenced_json(finding_ledger or "[]"),
+        fenced_json(finding_ledger or "[]"),
         "## 未解決 Findings JSON",
-        _fenced_json(open_findings or "[]"),
+        fenced_json(open_findings or "[]"),
     ]
 
     if role == "reviewer":
         sections.extend([
             "## Implementer 出力 JSON",
-            _fenced_json(latest_implementer_output or "{}"),
+            fenced_json(latest_implementer_output or "{}"),
             "## Check 結果 JSON",
-            _fenced_json(checks or "{}"),
+            fenced_json(checks or "{}"),
         ])
 
         if context.review_record_path:
@@ -135,7 +136,7 @@ def build_prompt(role: AgentRole, context: AgentContext) -> str:
         "## 試行回数",
         str(context.attempt),
         "## 出力 JSON Schema",
-        _fenced_json(output_schema),
+        fenced_json(output_schema),
         "## 出力指示",
         "\n".join([
             "上記 JSON Schema に厳密に一致する JSON オブジェクトだけを返してください。",
@@ -203,10 +204,6 @@ def _read_optional_file(file_path: str | None) -> str | None:
         return Path(file_path).read_text(encoding="utf-8")
     except (FileNotFoundError, OSError):
         return None
-
-
-def _fenced_json(value: str) -> str:
-    return f"```json\n{value.strip()}\n```"
 
 
 def _normalize_path_for_prompt(file_path: str) -> str:

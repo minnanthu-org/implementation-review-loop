@@ -1,4 +1,4 @@
-"""Tests for init_cmd — matching init.test.ts."""
+"""Tests for init_cmd."""
 
 import json
 from pathlib import Path

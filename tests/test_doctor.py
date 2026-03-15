@@ -1,4 +1,4 @@
-"""Tests for repository health check — ported from doctor.test.ts."""
+"""Tests for repository health check."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ def test_validates_compat_loop_repo(tmp_path: Path) -> None:
                 "checksFile": ".agent-loop/checks.json",
                 "execution": {
                     "mode": "compat-loop",
-                    "provider": "codex",
+                    "defaultProvider": "codex",
                 },
             },
             indent=2,
@@ -115,7 +115,7 @@ def test_fails_when_checks_file_is_missing(tmp_path: Path) -> None:
                 "checksFile": ".agent-loop/checks.json",
                 "execution": {
                     "mode": "compat-loop",
-                    "provider": "codex",
+                    "defaultProvider": "codex",
                 },
             },
             indent=2,

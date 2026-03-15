@@ -1,4 +1,4 @@
-"""JSON and text file I/O helpers for the run-loop — matching run-loop.ts helpers."""
+"""JSON and text file I/O helpers for the run-loop."""
 
 from __future__ import annotations
 

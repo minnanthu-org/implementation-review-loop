@@ -1,4 +1,4 @@
-"""agent-loop loop — run-loop CLI subcommands, matching run-loop.ts CLI."""
+"""agent-loop loop — run-loop CLI subcommands."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Claude CLI integration — matching claude.ts."""
+"""Claude CLI integration."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import json
 import os
 from pathlib import Path
 
-from agent_loop.core.process import CommandExecutionResult, run_shell_command
+from agent_loop.core.process import CommandExecutionResult, run_shell_command, shell_escape
 
 DEFAULT_CLAUDE_EXEC_TIMEOUT_MS = 900_000
 
@@ -14,7 +14,7 @@ DEFAULT_CLAUDE_EXEC_TIMEOUT_MS = 900_000
 def build_structured_claude_command(*, cwd: str, schema_path: str) -> str:
     """Build a non-interactive Claude command with structured output."""
     schema = json.loads(Path(schema_path).read_text(encoding="utf-8"))
-    escaped_schema = _shell_escape(json.dumps(schema))
+    escaped_schema = shell_escape(json.dumps(schema))
 
     return " ".join(
         [
@@ -64,10 +64,7 @@ def run_structured_claude_prompt(
 
 
 def extract_json(text: str) -> str:
-    """Extract a JSON object from *text*, handling code-block wrappers and noise.
-
-    Matches the behaviour of ``extractJson`` in ``claude.ts``.
-    """
+    """Extract a JSON object from *text*, handling code-block wrappers and noise."""
     # 1. Try direct parse
     try:
         json.loads(text)
@@ -124,5 +121,3 @@ def extract_json(text: str) -> str:
     )
 
 
-def _shell_escape(value: str) -> str:
-    return "'" + value.replace("'", "'\\''") + "'"

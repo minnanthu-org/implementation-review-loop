@@ -1,4 +1,4 @@
-"""Tests for new_plan_cmd — matching new-plan.test.ts."""
+"""Tests for new_plan_cmd."""
 
 import json
 from pathlib import Path
@@ -44,7 +44,7 @@ class TestScaffoldPlanFiles:
                         "reviewer": ".agent-loop/prompts/code-reviewer.md",
                     },
                     "checksFile": ".agent-loop/checks.json",
-                    "execution": {"mode": "compat-loop", "provider": "codex"},
+                    "execution": {"mode": "compat-loop", "defaultProvider": "codex"},
                 },
                 indent=2,
             ),

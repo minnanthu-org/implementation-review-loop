@@ -1,15 +1,15 @@
-"""agent-loop plan new — plan file scaffolding, matching new-plan.ts."""
+"""agent-loop plan new — plan file scaffolding."""
 
 from __future__ import annotations
 
 import re
 import sys
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 
 import click
 
+from agent_loop.cli.formatting import format_tokyo_date
 from agent_loop.core.repo_config import load_repo_config
 
 DEFAULT_AUTHOR = "Codex"
@@ -73,17 +73,6 @@ def normalize_slug(value: str | None) -> str | None:
     normalized = re.sub(r"[^a-z0-9]+", "-", normalized)
     normalized = normalized.strip("-")
     return normalized or None
-
-
-def format_tokyo_date() -> str:
-    """Return today's date in Asia/Tokyo as YYYY-MM-DD."""
-    try:
-        from zoneinfo import ZoneInfo
-
-        now = datetime.now(ZoneInfo("Asia/Tokyo"))
-    except Exception:
-        now = datetime.now(timezone.utc)
-    return now.strftime("%Y-%m-%d")
 
 
 def _render_plan_template(

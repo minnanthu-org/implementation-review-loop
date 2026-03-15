@@ -1,4 +1,4 @@
-"""Repository configuration — matching repo-config.ts."""
+"""Repository configuration."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Annotated, Literal, Union
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 
 class WorkflowProvider(str, Enum):
@@ -26,16 +26,7 @@ class CompatLoopPrompts(BaseModel):
 
 class CompatLoopExecution(BaseModel):
     mode: Literal["compat-loop"]
-    defaultProvider: WorkflowProvider | None = None
-    provider: WorkflowProvider | None = None  # 後方互換: 移行期間中のみ
-
-    @model_validator(mode="after")
-    def _require_at_least_one_provider(self) -> CompatLoopExecution:
-        if self.defaultProvider is None and self.provider is None:
-            raise ValueError(
-                "Either defaultProvider or provider must be specified"
-            )
-        return self
+    defaultProvider: WorkflowProvider
 
 
 class DelegatedExecution(BaseModel):
@@ -65,29 +56,12 @@ RepoConfig = Union[CompatLoopRepoConfig, DelegatedRepoConfig]
 
 
 def get_effective_provider(
-    execution: CompatLoopExecution
-    | DelegatedExecution
-    | dict[str, WorkflowProvider | None],
+    execution: CompatLoopExecution | DelegatedExecution,
 ) -> WorkflowProvider:
-    """Return the effective provider, preferring *defaultProvider* over *provider*."""
-    if isinstance(execution, dict):
-        default = execution.get("defaultProvider")
-        fallback = execution.get("provider")
-        resolved = default if default is not None else fallback
-    elif isinstance(execution, CompatLoopExecution):
-        resolved = (
-            execution.defaultProvider
-            if execution.defaultProvider is not None
-            else execution.provider
-        )
-    else:
-        resolved = execution.provider
-
-    if not resolved:
-        raise ValueError(
-            "Either defaultProvider or provider must be specified in execution config"
-        )
-    return resolved
+    """Return the effective provider from the execution config."""
+    if isinstance(execution, CompatLoopExecution):
+        return execution.defaultProvider
+    return execution.provider
 
 
 def get_repo_config_path(repo_path: str) -> str:

@@ -1,4 +1,4 @@
-"""Nested workflow invocation guard — matching nested-workflow-guard.ts."""
+"""Nested workflow invocation guard."""
 
 from __future__ import annotations
 

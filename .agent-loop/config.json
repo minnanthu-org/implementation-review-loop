@@ -11,6 +11,6 @@
   "checksFile": ".agent-loop/checks.json",
   "execution": {
     "mode": "compat-loop",
-    "provider": "codex"
+    "defaultProvider": "codex"
   }
 }

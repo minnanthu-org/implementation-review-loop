@@ -1,4 +1,4 @@
-"""Workflow data contracts — Pydantic v2 models matching the Zod schemas in contracts.ts."""
+"""Workflow data contracts — Pydantic v2 models."""
 
 from __future__ import annotations
 

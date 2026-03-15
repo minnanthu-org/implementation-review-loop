@@ -1,4 +1,4 @@
-"""agent-loop doctor — repository health check, matching doctor.ts CLI."""
+"""agent-loop doctor — repository health check."""
 
 from __future__ import annotations
 

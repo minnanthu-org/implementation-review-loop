@@ -1,4 +1,4 @@
-"""Asset path resolution via importlib.resources — matching assets.ts."""
+"""Asset path resolution via importlib.resources."""
 
 from __future__ import annotations
 

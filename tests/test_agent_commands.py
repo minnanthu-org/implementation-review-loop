@@ -1,4 +1,4 @@
-"""Tests for agent_commands — matching agent-commands.test.ts."""
+"""Tests for agent_commands."""
 
 from agent_loop.cli.agent_commands import (
     default_implementer_command,

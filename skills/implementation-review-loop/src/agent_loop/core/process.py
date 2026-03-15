@@ -1,4 +1,4 @@
-"""Shell command execution — sync subprocess wrapper matching process.ts."""
+"""Shell command execution — sync subprocess wrapper."""
 
 from __future__ import annotations
 
@@ -23,15 +23,11 @@ def run_shell_command(
     stdin_text: str | None = None,
     timeout_ms: int | None = None,
 ) -> CommandExecutionResult:
-    """Run a shell command via ``/bin/zsh -lc`` and capture output.
-
-    Mirrors the behaviour of ``runShellCommand`` in ``process.ts``.
-    """
+    """Run a shell command via ``/bin/zsh -lc`` and capture output."""
     timeout_s: float | None = None
     if timeout_ms is not None and timeout_ms > 0:
         timeout_s = timeout_ms / 1000.0
 
-    timed_out = False
     try:
         proc = subprocess.run(
             ["/bin/zsh", "-lc", command],
@@ -50,7 +46,6 @@ def run_shell_command(
             timed_out=False,
         )
     except subprocess.TimeoutExpired as exc:
-        timed_out = True
         stdout = exc.stdout or ""
         stderr = exc.stderr or ""
         if isinstance(stdout, bytes):
@@ -63,5 +58,20 @@ def run_shell_command(
             exit_code=124,
             stdout=stdout,
             stderr=stderr,
-            timed_out=timed_out,
+            timed_out=True,
         )
+
+
+def ensure_successful_command(label: str, result: CommandExecutionResult) -> None:
+    """Raise if command exited non-zero."""
+    if result.exit_code == 0:
+        return
+    raise RuntimeError(
+        f"{label} command failed with exit code {result.exit_code}: {result.command}\n"
+        + (result.stderr or result.stdout)
+    )
+
+
+def shell_escape(value: str) -> str:
+    """Single-quote escape a value for shell use."""
+    return "'" + value.replace("'", "'\\''") + "'"

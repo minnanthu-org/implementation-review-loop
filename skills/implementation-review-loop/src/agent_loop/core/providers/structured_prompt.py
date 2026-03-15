@@ -1,4 +1,4 @@
-"""Provider dispatcher — matching structured-prompt.ts."""
+"""Provider dispatcher."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Gemini CLI integration — matching gemini.ts."""
+"""Gemini CLI integration."""
 
 from __future__ import annotations
 

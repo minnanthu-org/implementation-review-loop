@@ -1,4 +1,4 @@
-"""Finding Ledger management — matching the findings portion of run-loop.ts."""
+"""Finding Ledger management."""
 
 from __future__ import annotations
 

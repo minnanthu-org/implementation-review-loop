@@ -1,4 +1,4 @@
-"""Check command configuration and execution — matching checks.ts."""
+"""Check command configuration and execution."""
 
 from __future__ import annotations
 
@@ -6,10 +6,10 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Annotated
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, ValidationError
 
+from agent_loop.core.contracts import NonEmptyStr
 from agent_loop.core.process import run_shell_command
 
 DEFAULT_CHECK_COMMAND_TIMEOUT_MS = 120_000
@@ -29,9 +29,6 @@ class AttemptCheckResults:
     all_passed: bool
     attempt: int
     commands: list[CheckResult]
-
-
-NonEmptyStr = Annotated[str, Field(min_length=1)]
 
 
 class ChecksConfig(BaseModel):
@@ -73,8 +70,10 @@ def resolve_configured_check_commands(
     checks_file_path: str,
 ) -> list[str]:
     """Merge commands from the checks file with additional *check_commands*, deduplicating."""
-    file_commands = _read_check_commands_file(checks_file_path)
-    return _deduplicate_commands([*file_commands, *check_commands])
+    contents = Path(checks_file_path).read_text(encoding="utf-8")
+    data = json.loads(contents)
+    config = ChecksConfig.model_validate(data)
+    return _deduplicate_commands([*config.commands, *check_commands])
 
 
 def run_checks(*, commands: list[str], cwd: str) -> list[CheckResult]:
@@ -100,13 +99,6 @@ def run_checks(*, commands: list[str], cwd: str) -> list[CheckResult]:
         )
 
     return results
-
-
-def _read_check_commands_file(file_path: str) -> list[str]:
-    contents = Path(file_path).read_text(encoding="utf-8")
-    data = json.loads(contents)
-    parsed = ChecksConfig.model_validate(data)
-    return parsed.commands
 
 
 def _deduplicate_commands(commands: list[str]) -> list[str]:

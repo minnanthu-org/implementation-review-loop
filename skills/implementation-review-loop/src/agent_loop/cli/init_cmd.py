@@ -1,4 +1,4 @@
-"""agent-loop init — repository scaffolding, matching init.ts."""
+"""agent-loop init — repository scaffolding."""
 
 from __future__ import annotations
 

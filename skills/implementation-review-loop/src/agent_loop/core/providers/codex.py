@@ -1,10 +1,10 @@
-"""Codex CLI integration — matching codex.ts."""
+"""Codex CLI integration."""
 
 from __future__ import annotations
 
 import os
 
-from agent_loop.core.process import CommandExecutionResult, run_shell_command
+from agent_loop.core.process import CommandExecutionResult, run_shell_command, shell_escape
 
 DEFAULT_CODEX_EXEC_TIMEOUT_MS = 420_000
 
@@ -13,9 +13,9 @@ def build_structured_codex_command(
     *, cwd: str, output_path: str, schema_path: str
 ) -> str:
     """Build a Codex exec command with structured output."""
-    escaped_schema_path = _shell_escape(schema_path)
-    escaped_output_path = _shell_escape(output_path)
-    escaped_repo_path = _shell_escape(cwd)
+    escaped_schema_path = shell_escape(schema_path)
+    escaped_output_path = shell_escape(output_path)
+    escaped_repo_path = shell_escape(cwd)
 
     return (
         "codex exec --ephemeral --skip-git-repo-check --full-auto --color never "
@@ -49,5 +49,3 @@ def run_structured_codex_prompt(
     )
 
 
-def _shell_escape(value: str) -> str:
-    return "'" + value.replace("'", "'\\''") + "'"

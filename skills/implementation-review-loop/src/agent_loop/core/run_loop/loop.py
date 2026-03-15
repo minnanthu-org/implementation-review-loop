@@ -1,9 +1,11 @@
-"""Main run-loop — matching the loop portion of run-loop.ts."""
+"""Main run-loop."""
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
+
+from pydantic import TypeAdapter
 
 from agent_loop.core.checks import resolve_configured_check_commands, run_checks
 from agent_loop.core.contracts import (
@@ -15,7 +17,7 @@ from agent_loop.core.nested_workflow_guard import (
     assert_no_nested_workflow_invocation,
     build_workflow_command_environment,
 )
-from agent_loop.core.process import CommandExecutionResult, run_shell_command
+from agent_loop.core.process import ensure_successful_command, run_shell_command
 from agent_loop.core.repo_config import load_compat_loop_repo_config
 from agent_loop.core.run_loop.findings import (
     apply_implementer_responses,
@@ -25,8 +27,7 @@ from agent_loop.core.run_loop.findings import (
 )
 from agent_loop.core.run_loop.io import read_json, write_json
 from agent_loop.core.run_loop.state import (
-    CompletedRun,
-    InitializedRun,
+    RunResult,
     ResolvedRunLoopOptions,
     RunLoopOptions,
     RunState,
@@ -42,8 +43,8 @@ from agent_loop.core.run_loop.summary import write_run_summary
 DEFAULT_AGENT_COMMAND_TIMEOUT_MS = 1_200_000
 
 
-def initialize_run(options: RunLoopOptions) -> InitializedRun:
-    """Set up a new run directory and initial state — matches ``initializeRun``."""
+def initialize_run(options: RunLoopOptions) -> RunResult:
+    """Set up a new run directory and initial state."""
     resolved = resolve_run_loop_options(options)
     plan_contents = Path(resolved.sourcePlanPath).read_text(encoding="utf-8")
     run_id = build_run_id(resolved.sourcePlanPath, datetime.now(timezone.utc))
@@ -76,11 +77,11 @@ def initialize_run(options: RunLoopOptions) -> InitializedRun:
 
     write_run_snapshot(run_dir, state)
 
-    return InitializedRun(runDir=run_dir, state=state)
+    return RunResult(runDir=run_dir, state=state)
 
 
-def run_loop(options: RunLoopOptions) -> CompletedRun:
-    """Execute the full implement→check→review loop — matches ``runLoop``."""
+def run_loop(options: RunLoopOptions) -> RunResult:
+    """Execute the full implement→check→review loop."""
     initialized = initialize_run(options)
     run_dir = initialized.runDir
     state = update_state(initialized.state, status=RunStatus.RUNNING)
@@ -118,8 +119,6 @@ def run_loop(options: RunLoopOptions) -> CompletedRun:
             read_json(implementer_output_path)
         )
 
-        from pydantic import TypeAdapter
-
         ledger_adapter: TypeAdapter[list[FindingLedgerEntry]] = TypeAdapter(
             list[FindingLedgerEntry]
         )
@@ -154,7 +153,7 @@ def run_loop(options: RunLoopOptions) -> CompletedRun:
                 status=RunStatus.NEEDS_REPLAN,
             )
             write_run_snapshot(run_dir, state)
-            return CompletedRun(runDir=run_dir, state=state)
+            return RunResult(runDir=run_dir, state=state)
 
         check_results = run_checks(
             commands=state.checkCommands,
@@ -229,26 +228,26 @@ def run_loop(options: RunLoopOptions) -> CompletedRun:
         write_run_snapshot(run_dir, state)
 
         if review_output.verdict.value == "approve":
-            return CompletedRun(runDir=run_dir, state=state)
+            return RunResult(runDir=run_dir, state=state)
 
         if review_output.verdict.value in ("replan", "human"):
-            return CompletedRun(runDir=run_dir, state=state)
+            return RunResult(runDir=run_dir, state=state)
 
         if attempt == state.maxAttempts:
             state = update_state(state, status=RunStatus.FAILED)
             write_run_snapshot(run_dir, state)
-            return CompletedRun(runDir=run_dir, state=state)
+            return RunResult(runDir=run_dir, state=state)
 
     state = update_state(initialized.state, status=RunStatus.FAILED)
     write_run_snapshot(run_dir, state)
-    return CompletedRun(runDir=run_dir, state=state)
+    return RunResult(runDir=run_dir, state=state)
 
 
 # --- Internal helpers ---
 
 
 def write_run_snapshot(run_dir: str, state: RunState) -> None:
-    """Write state.json and summary.md — matches ``writeRunSnapshot``."""
+    """Write state.json and summary.md."""
     write_json(str(Path(run_dir) / "state.json"), state.model_dump())
 
     try:
@@ -267,7 +266,7 @@ def build_workflow_environment(
     implementer_output_path: str | None = None,
     review_output_path: str | None = None,
 ) -> dict[str, str]:
-    """Build the WORKFLOW_* environment — matches ``buildWorkflowEnvironment``."""
+    """Build the WORKFLOW_* environment for subprocess invocations."""
     env = build_workflow_command_environment("loop:run")
     env.update({
         "WORKFLOW_REPO_PATH": state.repoPath,
@@ -290,18 +289,8 @@ def build_workflow_environment(
     return env
 
 
-def ensure_successful_command(label: str, result: CommandExecutionResult) -> None:
-    """Raise if command exited non-zero — matches ``ensureSuccessfulCommand``."""
-    if result.exit_code == 0:
-        return
-    raise RuntimeError(
-        f"{label} command failed with exit code {result.exit_code}: {result.command}\n"
-        + (result.stderr or result.stdout)
-    )
-
-
 def resolve_run_loop_options(options: RunLoopOptions) -> ResolvedRunLoopOptions:
-    """Resolve and validate run-loop options — matches ``resolveRunLoopOptions``."""
+    """Resolve and validate run-loop options."""
     assert_no_nested_workflow_invocation("loop:run")
 
     repo_path = str(Path(options.repoPath).resolve())
