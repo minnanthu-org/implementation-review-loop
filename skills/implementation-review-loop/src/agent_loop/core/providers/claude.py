@@ -11,36 +11,42 @@ from agent_loop.core.process import CommandExecutionResult, run_shell_command, s
 DEFAULT_CLAUDE_EXEC_TIMEOUT_MS = 900_000
 
 
-def build_structured_claude_command(*, cwd: str, schema_path: str) -> str:
+def build_structured_claude_command(
+    *, cwd: str, model: str | None = None, schema_path: str
+) -> str:
     """Build a non-interactive Claude command with structured output."""
     schema = json.loads(Path(schema_path).read_text(encoding="utf-8"))
     escaped_schema = shell_escape(json.dumps(schema))
 
-    return " ".join(
-        [
-            "claude -p",
-            # text を使用: json はエンベロープを返すため、--json-schema と組み合わせて
-            # スキーマ準拠の raw JSON を得るには text が正しい
-            "--output-format text",
-            "--input-format text",
-            "--permission-mode bypassPermissions",
-            "--no-session-persistence",
-            f"--json-schema {escaped_schema}",
-        ]
-    )
+    parts = [
+        "claude -p",
+        # text を使用: json はエンベロープを返すため、--json-schema と組み合わせて
+        # スキーマ準拠の raw JSON を得るには text が正しい
+        "--output-format text",
+        "--input-format text",
+        "--permission-mode bypassPermissions",
+        "--no-session-persistence",
+        f"--json-schema {escaped_schema}",
+    ]
+
+    if model:
+        parts.append(f"--model {shell_escape(model)}")
+
+    return " ".join(parts)
 
 
 def run_structured_claude_prompt(
     *,
     cwd: str,
     env: dict[str, str] | None = None,
+    model: str | None = None,
     output_path: str,
     prompt: str,
     schema_path: str,
     timeout_ms: int | None = None,
 ) -> CommandExecutionResult:
     """Run a structured Claude prompt and write JSON output to *output_path*."""
-    command = build_structured_claude_command(cwd=cwd, schema_path=schema_path)
+    command = build_structured_claude_command(cwd=cwd, model=model, schema_path=schema_path)
     merged_env = {**os.environ, **(env or {})}
 
     result = run_shell_command(

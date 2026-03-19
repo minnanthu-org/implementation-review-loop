@@ -26,4 +26,10 @@ def doctor_command(repo: str) -> None:
     for item in result.checked_items:
         click.echo(f"[INFO] checked: {item}", err=True)
 
+    for ps in result.providers:
+        if ps.available:
+            click.echo(f"[INFO] provider: {ps.provider} ✔ ({ps.detail})", err=True)
+        else:
+            click.echo(f"[WARN] provider: {ps.provider} ✘ ('{ps.detail}' not found on PATH)", err=True)
+
     sys.stdout.write(f"{result.mode}\n")

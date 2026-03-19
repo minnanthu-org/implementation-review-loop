@@ -27,11 +27,13 @@ class CompatLoopPrompts(BaseModel):
 class CompatLoopExecution(BaseModel):
     mode: Literal["compat-loop"]
     defaultProvider: WorkflowProvider
+    defaultModel: str | None = None
 
 
 class DelegatedExecution(BaseModel):
     mode: Literal["delegated"]
     provider: WorkflowProvider
+    defaultModel: str | None = None
 
 
 class CompatLoopRepoConfig(BaseModel):
@@ -62,6 +64,13 @@ def get_effective_provider(
     if isinstance(execution, CompatLoopExecution):
         return execution.defaultProvider
     return execution.provider
+
+
+def get_effective_model(
+    execution: CompatLoopExecution | DelegatedExecution,
+) -> str | None:
+    """Return the effective default model from the execution config."""
+    return execution.defaultModel
 
 
 def get_repo_config_path(repo_path: str) -> str:
