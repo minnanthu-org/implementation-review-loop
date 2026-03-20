@@ -79,7 +79,7 @@ def initialize_repository(
     (Path(resolved) / "docs" / "plan-reviews").mkdir(parents=True, exist_ok=True)
     if mode == "compat-loop":
         (Path(resolved) / ".agent-loop" / "prompts").mkdir(parents=True, exist_ok=True)
-        (Path(resolved) / ".loop" / "runs").mkdir(parents=True, exist_ok=True)
+        (Path(resolved) / ".agent-loop" / "runs").mkdir(parents=True, exist_ok=True)
 
     for file_entry in files:
         dest = file_entry["destination"]
