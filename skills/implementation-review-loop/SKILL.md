@@ -47,6 +47,21 @@ loop-run モードでは implementer と reviewer を個別に指定できる:
 
 有効なプロバイダー値: `codex`, `claude`, `gemini`
 
+## Model Determination
+
+| ユーザーの指示パターン | model |
+|---|---|
+| 指定なし | (なし: プロバイダーデフォルト) |
+| 「sonnetで」「gpt-5.4で」「gemini-2.5-proを使って」 | 該当文字列 |
+
+loop-run モードでは `--implementer-model` / `--reviewer-model` で個別指定できる:
+
+| ユーザーの指示パターン | implementer-model | reviewer-model |
+|---|---|---|
+| 指定なし | (なし) | (なし) |
+| 「sonnetで実装」 | sonnet | (なし) |
+| 「実装はgpt-5.4 レビューはsonnet」 | gpt-5.4 | sonnet |
+
 ## Procedure: plan-review
 
 1. 現在のリポジトリに `.agent-loop/config.json` が無ければ、`uv run --directory "${CLAUDE_SKILL_DIR}" agent-loop init --repo "$PWD" --mode compat-loop --provider <self>` を実行する。
@@ -69,9 +84,18 @@ loop-run モードでは implementer と reviewer を個別に指定できる:
 # plan-review
 uv run --directory "${CLAUDE_SKILL_DIR}" agent-loop plan review --repo "$PWD" --plan <plan-path> --provider <provider>
 
+# plan-review: モデル指定
+uv run --directory "${CLAUDE_SKILL_DIR}" agent-loop plan review --repo "$PWD" --plan <plan-path> --provider <provider> --model <model>
+
 # loop-run: 両方同じプロバイダー（短縮形）
 uv run --directory "${CLAUDE_SKILL_DIR}" agent-loop loop run --repo "$PWD" --plan <plan-path> --provider <self>
 
+# loop-run: モデル指定（両方同じ）
+uv run --directory "${CLAUDE_SKILL_DIR}" agent-loop loop run --repo "$PWD" --plan <plan-path> --provider <self> --model <model>
+
 # loop-run: クロスベンダー
 uv run --directory "${CLAUDE_SKILL_DIR}" agent-loop loop run --repo "$PWD" --plan <plan-path> --implementer-provider <ip> --reviewer-provider <rp>
+
+# loop-run: クロスベンダー + クロスモデル
+uv run --directory "${CLAUDE_SKILL_DIR}" agent-loop loop run --repo "$PWD" --plan <plan-path> --implementer-provider <ip> --implementer-model <im> --reviewer-provider <rp> --reviewer-model <rm>
 ```

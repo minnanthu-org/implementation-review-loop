@@ -16,6 +16,7 @@ def run_structured_prompt(
     command: str | None = None,
     cwd: str,
     env: dict[str, str] | None = None,
+    model: str | None = None,
     output_path: str,
     prompt: str,
     provider: WorkflowProvider,
@@ -37,6 +38,7 @@ def run_structured_prompt(
         return run_structured_claude_prompt(
             cwd=cwd,
             env=env,
+            model=model,
             output_path=output_path,
             prompt=prompt,
             schema_path=schema_path,
@@ -47,6 +49,7 @@ def run_structured_prompt(
         return run_structured_gemini_prompt(
             cwd=cwd,
             env=env,
+            model=model,
             output_path=output_path,
             prompt=prompt,
             schema_path=schema_path,
@@ -56,6 +59,7 @@ def run_structured_prompt(
     return run_structured_codex_prompt(
         cwd=cwd,
         env=env,
+        model=model,
         output_path=output_path,
         prompt=prompt,
         schema_path=schema_path,

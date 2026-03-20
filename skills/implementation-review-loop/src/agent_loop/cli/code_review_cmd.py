@@ -65,6 +65,7 @@ def run_code_review(
     repo_path: str,
     review_path: str | None = None,
     reviewer_command: str | None = None,
+    reviewer_model: str | None = None,
     reviewer_provider: WorkflowProvider | None = None,
 ) -> CompletedCodeReview:
     """Execute a one-shot code review and write the review record."""
@@ -106,7 +107,9 @@ def run_code_review(
 
     effective_reviewer_command = reviewer_command
     if not effective_reviewer_command and reviewer_provider:
-        effective_reviewer_command = default_reviewer_command(reviewer_provider)
+        effective_reviewer_command = default_reviewer_command(
+            reviewer_provider, model=reviewer_model
+        )
 
     if not effective_reviewer_command:
         raise click.UsageError(
@@ -394,6 +397,8 @@ def _summarize_check_stream(value: str, ok: bool) -> str:
 @click.option("--reviewer-command", default=None, help="Custom reviewer command.")
 @click.option("--provider", "provider_str", default=None, type=click.Choice(["codex", "claude", "gemini"]), help="Reviewer provider (alias for --reviewer-provider).")
 @click.option("--reviewer-provider", default=None, type=click.Choice(["codex", "claude", "gemini"]), help="Reviewer provider.")
+@click.option("--model", "model_str", default=None, help="Model to use (e.g. sonnet, gpt-5.4, gemini-2.5-pro).")
+@click.option("--reviewer-model", default=None, help="Reviewer model.")
 def code_review_command(
     plan_path: str,
     repo: str,
@@ -403,12 +408,15 @@ def code_review_command(
     reviewer_command: str | None,
     provider_str: str | None,
     reviewer_provider: str | None,
+    model_str: str | None,
+    reviewer_model: str | None,
 ) -> None:
     """Run a one-shot code review against an implementation plan."""
     effective_provider_str = reviewer_provider or provider_str
     effective_provider = (
         WorkflowProvider(effective_provider_str) if effective_provider_str else None
     )
+    effective_model = reviewer_model or model_str
 
     completed = run_code_review(
         check_commands=list(check_commands),
@@ -417,6 +425,7 @@ def code_review_command(
         repo_path=repo,
         review_path=review_path,
         reviewer_command=reviewer_command,
+        reviewer_model=effective_model,
         reviewer_provider=effective_provider,
     )
 

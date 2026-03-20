@@ -57,8 +57,10 @@
 
 ## 9. 必須 checks
 
-- `npm run build`
-- `npm test`
+`loop run` はこのセクションのコマンドを自動実行する。
+
+- `path/to/check-command-1`
+- `path/to/check-command-2`
 
 ## 10. 受け入れ条件
 

@@ -13,21 +13,25 @@ from agent_loop.core.process import CommandExecutionResult, run_shell_command
 DEFAULT_GEMINI_EXEC_TIMEOUT_MS = 420_000
 
 
-def build_structured_gemini_command() -> str:
+def build_structured_gemini_command(*, model: str | None = None) -> str:
     """Build a Gemini command with JSON output format and yolo mode."""
-    return " ".join(
-        [
-            "gemini",
-            "--output-format json",
-            "--yolo",  # 自動承認モード
-        ]
-    )
+    parts = [
+        "gemini",
+        "--output-format json",
+        "--yolo",  # 自動承認モード
+    ]
+
+    if model:
+        parts.append(f"--model {model}")
+
+    return " ".join(parts)
 
 
 def run_structured_gemini_prompt(
     *,
     cwd: str,
     env: dict[str, str] | None = None,
+    model: str | None = None,
     output_path: str,
     prompt: str,
     schema_path: str,
@@ -49,7 +53,7 @@ def run_structured_gemini_prompt(
         ]
     )
 
-    command = build_structured_gemini_command()
+    command = build_structured_gemini_command(model=model)
     merged_env = {**os.environ, **(env or {})}
 
     result = run_shell_command(

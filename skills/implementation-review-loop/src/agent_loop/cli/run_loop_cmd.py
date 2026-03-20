@@ -11,6 +11,7 @@ from agent_loop.cli.agent_commands import (
     default_reviewer_command,
 )
 from agent_loop.cli.assets import resolve_asset_path
+from agent_loop.core.providers import check_provider_available
 from agent_loop.core.repo_config import WorkflowProvider
 from agent_loop.core.run_loop import initialize_run, run_loop
 from agent_loop.core.run_loop.state import RunLoopOptions
@@ -19,18 +20,30 @@ from agent_loop.core.run_loop.state import RunLoopOptions
 def _resolve_agent_commands(
     *,
     implementer_command: str | None,
+    implementer_model: str | None = None,
     implementer_provider: WorkflowProvider | None,
     reviewer_command: str | None,
+    reviewer_model: str | None = None,
     reviewer_provider: WorkflowProvider | None,
 ) -> tuple[str, str]:
     """Resolve implementer and reviewer commands from options."""
+    # Pre-flight: verify provider CLIs are available before building commands.
+    if not implementer_command and implementer_provider:
+        check_provider_available(implementer_provider)
+    if not reviewer_command and reviewer_provider:
+        check_provider_available(reviewer_provider)
+
     effective_impl = implementer_command
     if not effective_impl and implementer_provider:
-        effective_impl = default_implementer_command(implementer_provider)
+        effective_impl = default_implementer_command(
+            implementer_provider, model=implementer_model
+        )
 
     effective_rev = reviewer_command
     if not effective_rev and reviewer_provider:
-        effective_rev = default_reviewer_command(reviewer_provider)
+        effective_rev = default_reviewer_command(
+            reviewer_provider, model=reviewer_model
+        )
 
     if not effective_impl:
         raise click.UsageError(
@@ -60,6 +73,9 @@ def _build_options(
     provider_str: str | None,
     implementer_provider_str: str | None,
     reviewer_provider_str: str | None,
+    model_str: str | None = None,
+    implementer_model_str: str | None = None,
+    reviewer_model_str: str | None = None,
 ) -> RunLoopOptions:
     """Build RunLoopOptions from Click params."""
     provider = WorkflowProvider(provider_str) if provider_str else None
@@ -74,10 +90,15 @@ def _build_options(
         else provider
     )
 
+    impl_model = implementer_model_str or model_str
+    rev_model = reviewer_model_str or model_str
+
     impl_cmd, rev_cmd = _resolve_agent_commands(
         implementer_command=implementer_command,
+        implementer_model=impl_model,
         implementer_provider=impl_provider,
         reviewer_command=reviewer_command,
+        reviewer_model=rev_model,
         reviewer_provider=rev_provider,
     )
 
@@ -111,6 +132,9 @@ def _build_options(
 @click.option("--provider", "provider_str", default=None, type=click.Choice(["codex", "claude", "gemini"]), help="Provider for both roles.")
 @click.option("--implementer-provider", "implementer_provider_str", default=None, type=click.Choice(["codex", "claude", "gemini"]), help="Implementer provider.")
 @click.option("--reviewer-provider", "reviewer_provider_str", default=None, type=click.Choice(["codex", "claude", "gemini"]), help="Reviewer provider.")
+@click.option("--model", "model_str", default=None, help="Model for both roles.")
+@click.option("--implementer-model", "implementer_model_str", default=None, help="Implementer model.")
+@click.option("--reviewer-model", "reviewer_model_str", default=None, help="Reviewer model.")
 def loop_init_command(
     plan_path: str,
     repo: str,
@@ -123,6 +147,9 @@ def loop_init_command(
     provider_str: str | None,
     implementer_provider_str: str | None,
     reviewer_provider_str: str | None,
+    model_str: str | None,
+    implementer_model_str: str | None,
+    reviewer_model_str: str | None,
 ) -> None:
     """Initialize a run directory without executing the loop."""
     options = _build_options(
@@ -137,6 +164,9 @@ def loop_init_command(
         provider_str=provider_str,
         implementer_provider_str=implementer_provider_str,
         reviewer_provider_str=reviewer_provider_str,
+        model_str=model_str,
+        implementer_model_str=implementer_model_str,
+        reviewer_model_str=reviewer_model_str,
     )
     initialized = initialize_run(options)
     click.echo(
@@ -157,6 +187,9 @@ def loop_init_command(
 @click.option("--provider", "provider_str", default=None, type=click.Choice(["codex", "claude", "gemini"]), help="Provider for both roles.")
 @click.option("--implementer-provider", "implementer_provider_str", default=None, type=click.Choice(["codex", "claude", "gemini"]), help="Implementer provider.")
 @click.option("--reviewer-provider", "reviewer_provider_str", default=None, type=click.Choice(["codex", "claude", "gemini"]), help="Reviewer provider.")
+@click.option("--model", "model_str", default=None, help="Model for both roles.")
+@click.option("--implementer-model", "implementer_model_str", default=None, help="Implementer model.")
+@click.option("--reviewer-model", "reviewer_model_str", default=None, help="Reviewer model.")
 def loop_run_command(
     plan_path: str,
     repo: str,
@@ -169,6 +202,9 @@ def loop_run_command(
     provider_str: str | None,
     implementer_provider_str: str | None,
     reviewer_provider_str: str | None,
+    model_str: str | None,
+    implementer_model_str: str | None,
+    reviewer_model_str: str | None,
 ) -> None:
     """Execute the implement-check-review loop."""
     options = _build_options(
@@ -183,6 +219,9 @@ def loop_run_command(
         provider_str=provider_str,
         implementer_provider_str=implementer_provider_str,
         reviewer_provider_str=reviewer_provider_str,
+        model_str=model_str,
+        implementer_model_str=implementer_model_str,
+        reviewer_model_str=reviewer_model_str,
     )
     completed = run_loop(options)
     click.echo(

@@ -6,11 +6,20 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from agent_loop.core.checks import load_checks_config
+from agent_loop.core.providers import is_provider_available
 from agent_loop.core.repo_config import (
     CompatLoopRepoConfig,
     RepoConfig,
+    WorkflowProvider,
     load_repo_config,
 )
+
+
+@dataclass
+class ProviderStatus:
+    provider: str
+    available: bool
+    detail: str  # resolved path or CLI name
 
 
 @dataclass
@@ -18,6 +27,7 @@ class DoctorResult:
     checked_items: list[str] = field(default_factory=list)
     mode: str = ""
     repo_path: str = ""
+    providers: list[ProviderStatus] = field(default_factory=list)
 
 
 def run_doctor(repo_path: str) -> DoctorResult:
@@ -42,10 +52,13 @@ def run_doctor(repo_path: str) -> DoctorResult:
             _validate_compat_loop_repo(resolved_repo_path, compat_config)
         )
 
+    provider_statuses = _check_all_providers()
+
     return DoctorResult(
         checked_items=checked_items,
         mode=repo_config.execution.mode,
         repo_path=resolved_repo_path,
+        providers=provider_statuses,
     )
 
 
@@ -85,6 +98,21 @@ def _assert_directory_exists(target_path: str, label: str) -> str:
         )
 
     return label
+
+
+def _check_all_providers() -> list[ProviderStatus]:
+    """Check availability of all known provider CLIs."""
+    statuses: list[ProviderStatus] = []
+    for provider in WorkflowProvider:
+        available, detail = is_provider_available(provider)
+        statuses.append(
+            ProviderStatus(
+                provider=provider.value,
+                available=available,
+                detail=detail,
+            )
+        )
+    return statuses
 
 
 def _assert_file_exists(target_path: str, label: str) -> str:

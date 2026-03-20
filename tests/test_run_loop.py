@@ -136,16 +136,23 @@ class TestInitializeRun:
         assert "状態: `initialized`" in summary
         assert "## 最新の Implementer 要約" in summary
 
-    def test_loads_default_checks_and_appends_cli_commands(
+    def test_merges_repo_plan_and_cli_checks(
         self, tmp_path: Path
     ) -> None:
         repo_dir = str(tmp_path)
         plan_dir = tmp_path / "docs" / "implementation-plans"
         plan_dir.mkdir(parents=True)
-        _write_compat_loop_config(
-            repo_dir, checks=["npm run lint", "npm test"]
+        _write_compat_loop_config(repo_dir, checks=["npm run lint", "npm test"])
+        (plan_dir / "example.md").write_text(
+            """# Plan
+
+## 9. 必須 checks
+
+- `pytest -q`
+- `npm test`
+""",
+            encoding="utf-8",
         )
-        (plan_dir / "example.md").write_text("# Plan\n", encoding="utf-8")
 
         initialized = initialize_run(
             RunLoopOptions(
@@ -162,6 +169,7 @@ class TestInitializeRun:
         assert initialized.state.checkCommands == [
             "npm run lint",
             "npm test",
+            "pytest -q",
             "npm run typecheck",
         ]
         assert initialized.state.checksFilePath == str(

@@ -29,7 +29,7 @@ class TestInitializeRepository:
         assert result.provider == WorkflowProvider.CODEX
         assert config["execution"]["mode"] == "compat-loop"
         assert config["execution"]["defaultProvider"] == "codex"
-        assert checks["commands"] == ["npm run build", "npm test"]
+        assert checks["commands"] == []
         assert "# 実装計画書テンプレート" in plan_template
         assert len(result.created_files) > 0
 

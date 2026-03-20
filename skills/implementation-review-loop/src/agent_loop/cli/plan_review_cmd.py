@@ -19,10 +19,12 @@ from agent_loop.cli.formatting import (
 )
 from agent_loop.core.contracts import PlanReviewOutput
 from agent_loop.core.process import ensure_successful_command
+from agent_loop.core.providers import check_provider_available
 from agent_loop.core.providers.structured_prompt import run_structured_prompt
 from agent_loop.core.repo_config import (
     RepoConfig,
     WorkflowProvider,
+    get_effective_model,
     get_effective_provider,
     load_repo_config,
 )
@@ -38,6 +40,7 @@ class CompletedPlanReview:
 
 def run_plan_review(
     *,
+    model: str | None = None,
     plan_path: str,
     repo_path: str,
     review_path: str | None = None,
@@ -83,6 +86,9 @@ def run_plan_review(
     output_path = str(Path(temp_dir) / "plan-review-output.json")
 
     reviewer_provider = provider or get_effective_provider(repo_config.execution)
+    if not reviewer_command:
+        check_provider_available(reviewer_provider)
+    reviewer_model = model or get_effective_model(repo_config.execution)
     reviewer_name = format_provider_display_name(reviewer_provider)
 
     result = run_structured_prompt(
@@ -93,6 +99,7 @@ def run_plan_review(
             "PLAN_REVIEW_PLAN_PATH": resolved_plan,
             "PLAN_REVIEW_REPO_PATH": resolved_repo,
         },
+        model=reviewer_model,
         output_path=output_path,
         prompt=prompt,
         provider=reviewer_provider,
@@ -241,15 +248,18 @@ def _map_conclusion_to_document_status(conclusion: str) -> str:
 @click.option("--review", "review_path", default=None, help="Output review file path.")
 @click.option("--reviewer-command", default=None, help="Custom reviewer command.")
 @click.option("--provider", default=None, type=click.Choice(["codex", "claude", "gemini"]), help="Reviewer provider.")
+@click.option("--model", default=None, help="Model to use (e.g. sonnet, gpt-5.4, gemini-2.5-pro).")
 def plan_review_command(
     plan_path: str,
     repo: str,
     review_path: str | None,
     reviewer_command: str | None,
     provider: str | None,
+    model: str | None,
 ) -> None:
     """Review an implementation plan."""
     completed = run_plan_review(
+        model=model,
         plan_path=plan_path,
         repo_path=repo,
         review_path=review_path,

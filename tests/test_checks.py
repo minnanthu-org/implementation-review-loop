@@ -10,6 +10,7 @@ import pytest
 
 from agent_loop.core.checks import (
     ChecksConfig,
+    extract_plan_check_commands,
     load_checks_config,
     resolve_configured_check_commands,
     run_checks,
@@ -61,6 +62,51 @@ def test_rejects_empty_command_string(tmp_path: Path) -> None:
         load_checks_config(str(tmp_path), "checks.json")
 
 
+# --- extract_plan_check_commands ---
+
+
+def test_extracts_commands_from_required_checks_section(tmp_path: Path) -> None:
+    plan = tmp_path / "plan.md"
+    plan.write_text(
+        """# Plan
+
+## 9. 必須 checks
+
+- `python -m py_compile foo.py`
+- `pytest -q`
+
+## 10. 受け入れ条件
+
+- ok
+""",
+        encoding="utf-8",
+    )
+
+    result = extract_plan_check_commands(str(plan))
+
+    assert result == ["python -m py_compile foo.py", "pytest -q"]
+
+
+def test_ignores_non_command_bullets_in_required_checks_section(tmp_path: Path) -> None:
+    plan = tmp_path / "plan.md"
+    plan.write_text(
+        """# Plan
+
+## 9. 必須 checks
+
+- ここには説明も書ける
+- `pytest`
+
+## 10. 受け入れ条件
+""",
+        encoding="utf-8",
+    )
+
+    result = extract_plan_check_commands(str(plan))
+
+    assert result == ["pytest"]
+
+
 # --- resolve_configured_check_commands ---
 
 
@@ -74,9 +120,10 @@ def test_merges_and_deduplicates_commands(tmp_path: Path) -> None:
     result = resolve_configured_check_commands(
         check_commands=["npm test", "npm run lint"],
         checks_file_path=str(checks_file),
+        plan_check_commands=["pytest -q", "npm test"],
     )
 
-    assert result == ["npm run build", "npm test", "npm run lint"]
+    assert result == ["npm run build", "npm test", "pytest -q", "npm run lint"]
 
 
 # --- run_checks ---

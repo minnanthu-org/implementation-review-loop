@@ -163,7 +163,9 @@ def write_prompt_file(
     return prompt_path
 
 
-def run_workflow_agent(provider: WorkflowProvider, role: AgentRole) -> None:
+def run_workflow_agent(
+    provider: WorkflowProvider, role: AgentRole, *, model: str | None = None
+) -> None:
     """Execute the workflow agent — unified entry point for all providers."""
     context = load_context(role)
     prompt = build_prompt(role, context)
@@ -177,6 +179,7 @@ def run_workflow_agent(provider: WorkflowProvider, role: AgentRole) -> None:
 
     result = run_structured_prompt(
         cwd=context.repo_path,
+        model=model,
         output_path=context.output_path,
         prompt=prompt,
         provider=provider,
@@ -223,9 +226,15 @@ def _normalize_path_for_prompt(file_path: str) -> str:
     type=click.Choice(["implementer", "reviewer"]),
     help="Agent role.",
 )
-def agent_run_command(provider: str, role: str) -> None:
+@click.option(
+    "--model",
+    default=None,
+    help="Model to use (e.g. sonnet, gpt-5.4, gemini-2.5-pro).",
+)
+def agent_run_command(provider: str, role: str, model: str | None) -> None:
     """Run a workflow agent with the specified provider and role."""
     run_workflow_agent(
         provider=WorkflowProvider(provider),
         role=role,  # type: ignore[arg-type]
+        model=model,
     )

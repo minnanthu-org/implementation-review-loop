@@ -7,7 +7,11 @@ from pathlib import Path
 
 from pydantic import TypeAdapter
 
-from agent_loop.core.checks import resolve_configured_check_commands, run_checks
+from agent_loop.core.checks import (
+    extract_plan_check_commands,
+    resolve_configured_check_commands,
+    run_checks,
+)
 from agent_loop.core.contracts import (
     CodeReviewOutput,
     FindingLedgerEntry,
@@ -295,12 +299,14 @@ def resolve_run_loop_options(options: RunLoopOptions) -> ResolvedRunLoopOptions:
 
     repo_path = str(Path(options.repoPath).resolve())
     repo_config = load_compat_loop_repo_config(repo_path)
+    source_plan_path = str(Path(repo_path) / options.planPath)
     checks_file_path = str(
         Path(repo_path) / (options.checksFile or repo_config.checksFile)
     )
     check_commands = resolve_configured_check_commands(
         check_commands=list(options.checkCommands),
         checks_file_path=checks_file_path,
+        plan_check_commands=extract_plan_check_commands(source_plan_path),
     )
 
     return ResolvedRunLoopOptions(
@@ -319,5 +325,5 @@ def resolve_run_loop_options(options: RunLoopOptions) -> ResolvedRunLoopOptions:
         repoPath=repo_path,
         reviewerCommand=options.reviewerCommand,
         runsDir=str(Path(repo_path) / (options.runsDir or repo_config.runDir)),
-        sourcePlanPath=str(Path(repo_path) / options.planPath),
+        sourcePlanPath=source_plan_path,
     )
