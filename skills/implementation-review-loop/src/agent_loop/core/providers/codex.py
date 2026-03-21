@@ -6,7 +6,7 @@ import os
 
 from agent_loop.core.process import CommandExecutionResult, run_shell_command, shell_escape
 
-DEFAULT_CODEX_EXEC_TIMEOUT_MS = 420_000
+DEFAULT_CODEX_EXEC_TIMEOUT_MS = 900_000
 
 
 def build_structured_codex_command(

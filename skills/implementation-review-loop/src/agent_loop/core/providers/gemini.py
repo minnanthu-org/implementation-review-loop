@@ -10,7 +10,7 @@ from pathlib import Path
 
 from agent_loop.core.process import CommandExecutionResult, run_shell_command
 
-DEFAULT_GEMINI_EXEC_TIMEOUT_MS = 420_000
+DEFAULT_GEMINI_EXEC_TIMEOUT_MS = 900_000
 
 
 def build_structured_gemini_command(*, model: str | None = None) -> str:
