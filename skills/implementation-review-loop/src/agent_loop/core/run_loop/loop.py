@@ -290,6 +290,17 @@ def build_workflow_environment(
         env["WORKFLOW_CHECKS_PATH"] = checks_path
     if review_output_path is not None:
         env["WORKFLOW_CODE_REVIEW_OUTPUT_PATH"] = review_output_path
+    if attempt >= 2:
+        prev = format_attempt(attempt - 1)
+        env["WORKFLOW_PREV_IMPLEMENTER_OUTPUT_PATH"] = str(
+            Path(run_dir) / "responses" / f"{prev}.json"
+        )
+        env["WORKFLOW_PREV_REVIEW_OUTPUT_PATH"] = str(
+            Path(run_dir) / "reviews" / f"{prev}.json"
+        )
+        env["WORKFLOW_PREV_CHECKS_PATH"] = str(
+            Path(run_dir) / "checks" / f"{prev}.json"
+        )
     return env
 
 

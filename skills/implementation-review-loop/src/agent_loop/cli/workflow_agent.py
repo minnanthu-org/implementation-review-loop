@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 from dataclasses import dataclass
@@ -33,6 +34,9 @@ class AgentContext:
     repo_path: str
     review_record_path: str | None
     run_dir: str
+    prev_implementer_output_path: str | None = None
+    prev_review_output_path: str | None = None
+    prev_checks_path: str | None = None
 
 
 def load_context(role: AgentRole) -> AgentContext:
@@ -73,6 +77,9 @@ def load_context(role: AgentRole) -> AgentContext:
         repo_path=repo_path,
         review_record_path=env.get("WORKFLOW_REVIEW_RECORD_PATH"),
         run_dir=run_dir,
+        prev_implementer_output_path=env.get("WORKFLOW_PREV_IMPLEMENTER_OUTPUT_PATH"),
+        prev_review_output_path=env.get("WORKFLOW_PREV_REVIEW_OUTPUT_PATH"),
+        prev_checks_path=env.get("WORKFLOW_PREV_CHECKS_PATH"),
     )
 
 
@@ -107,11 +114,19 @@ def build_prompt(role: AgentRole, context: AgentContext) -> str:
         prompt_template.strip(),
         "## 承認済み計画書",
         approved_plan.strip(),
+    ]
+
+    if role == "implementer":
+        prev_summary = _build_prev_attempt_summary(context)
+        if prev_summary:
+            sections.append(prev_summary)
+
+    sections.extend([
         "## Finding Ledger JSON",
         fenced_json(finding_ledger or "[]"),
         "## 未解決 Findings JSON",
         fenced_json(open_findings or "[]"),
-    ]
+    ])
 
     if role == "reviewer":
         sections.extend([
@@ -191,6 +206,71 @@ def run_workflow_agent(
             f"{provider.value} {role} command failed with exit code {result.exit_code}:\n"
             + (result.stderr or result.stdout)
         )
+
+
+def _build_prev_attempt_summary(context: AgentContext) -> str | None:
+    """Build a Markdown section summarising the previous attempt."""
+    prev_impl_raw = _read_optional_file(context.prev_implementer_output_path)
+    if prev_impl_raw is None:
+        return None
+
+    try:
+        prev_impl = json.loads(prev_impl_raw)
+    except (json.JSONDecodeError, ValueError):
+        return None
+
+    lines = ["## 前回試行サマリー", "", "### Implementer 応答"]
+    lines.append(f"- summaryMd: {prev_impl.get('summaryMd', '(なし)')}")
+    changed = prev_impl.get("changedFiles", [])
+    lines.append(f"- changedFiles: {', '.join(changed) if changed else '(なし)'}")
+    responses = prev_impl.get("responses", [])
+    if responses:
+        lines.append("- responses:")
+        for resp in responses:
+            fid = resp.get("findingId", "?")
+            rtype = resp.get("responseType", "?")
+            note = resp.get("noteMd", "")
+            lines.append(f"  - {fid}: {rtype} — {note}")
+    else:
+        lines.append("- responses: (なし)")
+
+    prev_review_raw = _read_optional_file(context.prev_review_output_path)
+    if prev_review_raw is not None:
+        try:
+            prev_review = json.loads(prev_review_raw)
+            lines.extend(["", "### Review 結果"])
+            lines.append(f"- verdict: {prev_review.get('verdict', '(不明)')}")
+            findings = prev_review.get("findings", [])
+            if findings:
+                lines.append("- findings:")
+                for f in findings:
+                    fid = f.get("id", "?")
+                    status = f.get("status", "?")
+                    summary = f.get("summaryMd", "")
+                    lines.append(f"  - {fid}: [{status}] {summary}")
+            else:
+                lines.append("- findings: (なし)")
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    prev_checks_raw = _read_optional_file(context.prev_checks_path)
+    if prev_checks_raw is not None:
+        try:
+            prev_checks = json.loads(prev_checks_raw)
+            lines.extend(["", "### Check 結果"])
+            lines.append(f"- allPassed: {prev_checks.get('allPassed', '(不明)')}")
+            commands = prev_checks.get("commands", [])
+            failed = [c for c in commands if not c.get("ok", True)]
+            if failed:
+                lines.append("- 失敗した checks:")
+                for c in failed:
+                    lines.append(f"  - `{c.get('command', '?')}` (exit {c.get('exitCode', '?')})")
+            else:
+                lines.append("- 失敗した checks: なし")
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    return "\n".join(lines)
 
 
 def _require_env(name: str) -> str:
