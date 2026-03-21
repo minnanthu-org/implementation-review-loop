@@ -6,10 +6,12 @@ import json
 import os
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
 from agent_loop.core.run_loop import RunLoopOptions, initialize_run, run_loop
+from agent_loop.core.run_loop.summary import format_duration
 
 FIXTURE_DIR = str(Path(__file__).resolve().parent / "fixtures")
 
@@ -274,3 +276,158 @@ class TestRunLoop:
         assert "解消済み finding 数: 1" in summary
         assert "## 最新の Review 要約" in summary
         assert "All findings are resolved." in summary
+
+    def test_timing_data_on_approve(self, tmp_path: Path) -> None:
+        """Approved run returns deterministic timing values for each attempt."""
+        repo_dir = str(tmp_path)
+        plan_dir = tmp_path / "docs" / "implementation-plans"
+        plan_dir.mkdir(parents=True)
+        _write_compat_loop_config(repo_dir)
+        (plan_dir / "example.md").write_text("# Approved Plan\n", encoding="utf-8")
+
+        # Deterministic monotonic clock: increments by 10s per call
+        tick = iter(range(0, 10000, 10))
+
+        python = sys.executable
+        with patch("agent_loop.core.run_loop.loop.time") as mock_time:
+            mock_time.monotonic = lambda: next(tick)
+            completed = run_loop(
+                RunLoopOptions(
+                    checkCommands=[
+                        f"{python} {Path(FIXTURE_DIR) / 'mock_check.py'}"
+                    ],
+                    codeReviewSchemaPath=_DUMMY_SCHEMA,
+                    implementerCommand=f"{python} {Path(FIXTURE_DIR) / 'mock_implementer.py'}",
+                    implementerSchemaPath=_DUMMY_SCHEMA,
+                    planPath="docs/implementation-plans/example.md",
+                    repoPath=repo_dir,
+                    reviewerCommand=f"{python} {Path(FIXTURE_DIR) / 'mock_reviewer.py'}",
+                )
+            )
+
+        assert completed.state.status.value == "approved"
+        assert len(completed.timing) == 2
+
+        # Each phase gets exactly 10s (two monotonic() calls per phase, 10 apart)
+        t1 = completed.timing[0]
+        assert t1["attempt"] == 1
+        assert t1["implement"] == 10.0
+        assert t1["check"] == 10.0
+        assert t1["review"] == 10.0
+
+        t2 = completed.timing[1]
+        assert t2["attempt"] == 2
+        assert t2["implement"] == 10.0
+        assert t2["check"] == 10.0
+        assert t2["review"] == 10.0
+
+        # Verify summary.md contains deterministic timing values
+        summary = (Path(completed.runDir) / "summary.md").read_text(encoding="utf-8")
+        assert "## 所要時間" in summary
+        assert "| Attempt | Implement | Check | Review | Total |" in summary
+        # Each attempt row: 10s per phase, 30s total
+        assert "| 1 | 10s | 10s | 10s | 30s |" in summary
+        assert "| 2 | 10s | 10s | 10s | 30s |" in summary
+        # Totals row: 20s per phase, 60s = 1m 00s grand total
+        assert "| **Total** | 20s | 20s | 20s | 1m 00s |" in summary
+
+    def test_timing_data_on_replan(self, tmp_path: Path) -> None:
+        """Replan exit records implement only; check and review are None."""
+        repo_dir = str(tmp_path)
+        plan_dir = tmp_path / "docs" / "implementation-plans"
+        plan_dir.mkdir(parents=True)
+        _write_compat_loop_config(repo_dir)
+        (plan_dir / "example.md").write_text("# Replan Plan\n", encoding="utf-8")
+
+        tick = iter(range(0, 10000, 10))
+
+        python = sys.executable
+        with patch("agent_loop.core.run_loop.loop.time") as mock_time:
+            mock_time.monotonic = lambda: next(tick)
+            completed = run_loop(
+                RunLoopOptions(
+                    checkCommands=[
+                        f"{python} {Path(FIXTURE_DIR) / 'mock_check.py'}"
+                    ],
+                    codeReviewSchemaPath=_DUMMY_SCHEMA,
+                    implementerCommand=f"{python} {Path(FIXTURE_DIR) / 'mock_replan_implementer.py'}",
+                    implementerSchemaPath=_DUMMY_SCHEMA,
+                    planPath="docs/implementation-plans/example.md",
+                    repoPath=repo_dir,
+                    reviewerCommand=f"{python} {Path(FIXTURE_DIR) / 'mock_reviewer.py'}",
+                )
+            )
+
+        assert completed.state.status.value == "needs-replan"
+        assert len(completed.timing) == 1
+
+        t = completed.timing[0]
+        assert t["attempt"] == 1
+        assert t["implement"] == 10.0
+        assert t["check"] is None
+        assert t["review"] is None
+
+        # Verify summary.md timing shows "-" for unexecuted phases, deterministic values
+        summary = (Path(completed.runDir) / "summary.md").read_text(encoding="utf-8")
+        assert "## 所要時間" in summary
+        assert "| 1 | 10s | - | - | 10s |" in summary
+        assert "| **Total** | 10s | - | - | 10s |" in summary
+
+
+class TestTimingCli:
+    def test_print_timing_table_approve(self) -> None:
+        """_print_timing_table outputs correct box-drawing table to stderr."""
+        import io
+
+        from agent_loop.cli.run_loop_cmd import _print_timing_table
+
+        timing = [
+            {"attempt": 1, "implement": 10.0, "check": 10.0, "review": 10.0},
+            {"attempt": 2, "implement": 10.0, "check": 10.0, "review": 10.0},
+        ]
+
+        captured = io.StringIO()
+        with patch("sys.stderr", captured):
+            _print_timing_table(timing)
+
+        output = captured.getvalue()
+        assert "Attempt" in output
+        assert "Implement" in output
+        assert "10s" in output
+        assert "Total" in output
+        # Box-drawing characters
+        assert "┌" in output
+        assert "└" in output
+
+    def test_print_timing_table_replan(self) -> None:
+        """_print_timing_table shows dashes for None phases."""
+        import io
+
+        from agent_loop.cli.run_loop_cmd import _print_timing_table
+
+        timing = [
+            {"attempt": 1, "implement": 10.0, "check": None, "review": None},
+        ]
+
+        captured = io.StringIO()
+        with patch("sys.stderr", captured):
+            _print_timing_table(timing)
+
+        output = captured.getvalue()
+        assert "10s" in output
+        assert "-" in output
+        assert "Total" in output
+
+
+class TestFormatDuration:
+    def test_none_returns_dash(self) -> None:
+        assert format_duration(None) == "-"
+
+    def test_seconds_only(self) -> None:
+        assert format_duration(45.0) == "45s"
+
+    def test_minutes_and_seconds(self) -> None:
+        assert format_duration(150.0) == "2m 30s"
+
+    def test_zero(self) -> None:
+        assert format_duration(0.0) == "0s"

@@ -10,10 +10,14 @@ from agent_loop.core.contracts import (
     FindingLedgerEntry,
 )
 from agent_loop.core.run_loop.io import read_optional_json, read_optional_text
-from agent_loop.core.run_loop.state import RunState, format_attempt
+from agent_loop.core.run_loop.state import AttemptTiming, RunState, format_attempt
 
 
-def write_run_summary(run_dir: str, state: RunState) -> None:
+def write_run_summary(
+    run_dir: str,
+    state: RunState,
+    timing: list[AttemptTiming] | None = None,
+) -> None:
     """Generate and write ``summary.md``."""
     latest_attempt_path = (
         str(Path(run_dir) / "attempts" / f"{format_attempt(state.currentAttempt)}.md")
@@ -134,9 +138,44 @@ def write_run_summary(run_dir: str, state: RunState) -> None:
             )
         lines.append("")
 
+    if timing:
+        lines.append("## 所要時間")
+        lines.append("")
+        lines.append("| Attempt | Implement | Check | Review | Total |")
+        lines.append("|---------|-----------|-------|--------|-------|")
+        for t in timing:
+            impl = format_duration(t["implement"])
+            chk = format_duration(t["check"])
+            rev = format_duration(t["review"])
+            parts = [v for v in (t["implement"], t["check"], t["review"]) if v is not None]
+            total = format_duration(sum(parts)) if parts else "-"
+            lines.append(f"| {t['attempt']} | {impl} | {chk} | {rev} | {total} |")
+        # Totals row
+        all_impl = [t["implement"] for t in timing if t["implement"] is not None]
+        all_chk = [t["check"] for t in timing if t["check"] is not None]
+        all_rev = [t["review"] for t in timing if t["review"] is not None]
+        total_impl = format_duration(sum(all_impl)) if all_impl else "-"
+        total_chk = format_duration(sum(all_chk)) if all_chk else "-"
+        total_rev = format_duration(sum(all_rev)) if all_rev else "-"
+        all_vals = all_impl + all_chk + all_rev
+        grand_total = format_duration(sum(all_vals)) if all_vals else "-"
+        lines.append(f"| **Total** | {total_impl} | {total_chk} | {total_rev} | {grand_total} |")
+        lines.append("")
+
     Path(run_dir, "summary.md").write_text(
         "\n".join(lines) + "\n", encoding="utf-8"
     )
+
+
+def format_duration(seconds: float | None) -> str:
+    """Format seconds as ``Xm Ys`` or ``Xs``, or ``-`` for None."""
+    if seconds is None:
+        return "-"
+    total = int(seconds)
+    m, s = divmod(total, 60)
+    if m > 0:
+        return f"{m}m {s:02d}s"
+    return f"{s}s"
 
 
 def single_line(value: str) -> str:

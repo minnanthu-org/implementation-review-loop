@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -31,6 +32,7 @@ from agent_loop.core.run_loop.findings import (
 )
 from agent_loop.core.run_loop.io import read_json, write_json
 from agent_loop.core.run_loop.state import (
+    AttemptTiming,
     RunResult,
     ResolvedRunLoopOptions,
     RunLoopOptions,
@@ -91,9 +93,18 @@ def run_loop(options: RunLoopOptions) -> RunResult:
     state = update_state(initialized.state, status=RunStatus.RUNNING)
     write_run_snapshot(run_dir, state)
 
+    all_timings: list[AttemptTiming] = []
+
     for attempt in range(1, state.maxAttempts + 1):
         state = update_state(state, currentAttempt=attempt, status=RunStatus.RUNNING)
         write_run_snapshot(run_dir, state)
+
+        attempt_timing: AttemptTiming = {
+            "attempt": attempt,
+            "implement": None,
+            "check": None,
+            "review": None,
+        }
 
         open_findings_path = str(Path(run_dir) / "open-findings.json")
         write_json(
@@ -104,6 +115,8 @@ def run_loop(options: RunLoopOptions) -> RunResult:
         implementer_output_path = str(
             Path(run_dir) / "responses" / f"{format_attempt(attempt)}.json"
         )
+
+        t0 = time.monotonic()
         implementer_result = run_shell_command(
             command=state.implementerCommand,
             cwd=state.repoPath,
@@ -116,6 +129,7 @@ def run_loop(options: RunLoopOptions) -> RunResult:
             ),
             timeout_ms=DEFAULT_AGENT_COMMAND_TIMEOUT_MS,
         )
+        attempt_timing["implement"] = time.monotonic() - t0
 
         ensure_successful_command("Implementer", implementer_result)
 
@@ -156,13 +170,17 @@ def run_loop(options: RunLoopOptions) -> RunResult:
                 openFindings=list(state.openFindings),
                 status=RunStatus.NEEDS_REPLAN,
             )
-            write_run_snapshot(run_dir, state)
-            return RunResult(runDir=run_dir, state=state)
+            all_timings.append(attempt_timing)
+            write_run_snapshot(run_dir, state, timing=all_timings)
+            return RunResult(runDir=run_dir, state=state, timing=all_timings)
 
+        t0 = time.monotonic()
         check_results = run_checks(
             commands=state.checkCommands,
             cwd=state.repoPath,
         )
+        attempt_timing["check"] = time.monotonic() - t0
+
         checks_path = str(
             Path(run_dir) / "checks" / f"{format_attempt(attempt)}.json"
         )
@@ -184,6 +202,8 @@ def run_loop(options: RunLoopOptions) -> RunResult:
         review_output_path = str(
             Path(run_dir) / "reviews" / f"{format_attempt(attempt)}.json"
         )
+
+        t0 = time.monotonic()
         reviewer_result = run_shell_command(
             command=state.reviewerCommand,
             cwd=state.repoPath,
@@ -198,6 +218,7 @@ def run_loop(options: RunLoopOptions) -> RunResult:
             ),
             timeout_ms=DEFAULT_AGENT_COMMAND_TIMEOUT_MS,
         )
+        attempt_timing["review"] = time.monotonic() - t0
 
         ensure_successful_command("Code Reviewer", reviewer_result)
 
@@ -229,33 +250,42 @@ def run_loop(options: RunLoopOptions) -> RunResult:
             ],
             status=map_verdict_to_status(review_output.verdict),
         )
-        write_run_snapshot(run_dir, state)
+
+        all_timings.append(attempt_timing)
 
         if review_output.verdict.value == "approve":
-            return RunResult(runDir=run_dir, state=state)
+            write_run_snapshot(run_dir, state, timing=all_timings)
+            return RunResult(runDir=run_dir, state=state, timing=all_timings)
 
         if review_output.verdict.value in ("replan", "human"):
-            return RunResult(runDir=run_dir, state=state)
+            write_run_snapshot(run_dir, state, timing=all_timings)
+            return RunResult(runDir=run_dir, state=state, timing=all_timings)
+
+        write_run_snapshot(run_dir, state)
 
         if attempt == state.maxAttempts:
             state = update_state(state, status=RunStatus.FAILED)
-            write_run_snapshot(run_dir, state)
-            return RunResult(runDir=run_dir, state=state)
+            write_run_snapshot(run_dir, state, timing=all_timings)
+            return RunResult(runDir=run_dir, state=state, timing=all_timings)
 
     state = update_state(initialized.state, status=RunStatus.FAILED)
-    write_run_snapshot(run_dir, state)
-    return RunResult(runDir=run_dir, state=state)
+    write_run_snapshot(run_dir, state, timing=all_timings)
+    return RunResult(runDir=run_dir, state=state, timing=all_timings)
 
 
 # --- Internal helpers ---
 
 
-def write_run_snapshot(run_dir: str, state: RunState) -> None:
+def write_run_snapshot(
+    run_dir: str,
+    state: RunState,
+    timing: list[AttemptTiming] | None = None,
+) -> None:
     """Write state.json and summary.md."""
     write_json(str(Path(run_dir) / "state.json"), state.model_dump())
 
     try:
-        write_run_summary(run_dir, state)
+        write_run_summary(run_dir, state, timing=timing)
     except Exception:
         return
 

@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
+from typing import TypedDict
 
 from pydantic import BaseModel
 
@@ -84,10 +85,18 @@ class RunState(BaseModel):
     updatedAt: str
 
 
+class AttemptTiming(TypedDict):
+    attempt: int
+    implement: float | None
+    check: float | None
+    review: float | None
+
+
 @dataclass(frozen=True)
 class RunResult:
     runDir: str
     state: RunState
+    timing: list[AttemptTiming] = field(default_factory=list)
 
 
 # --- State helpers ---

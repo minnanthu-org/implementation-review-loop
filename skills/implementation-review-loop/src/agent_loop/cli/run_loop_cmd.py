@@ -14,7 +14,59 @@ from agent_loop.cli.assets import resolve_asset_path
 from agent_loop.core.providers import check_provider_available
 from agent_loop.core.repo_config import WorkflowProvider
 from agent_loop.core.run_loop import initialize_run, run_loop
-from agent_loop.core.run_loop.state import RunLoopOptions
+from agent_loop.core.run_loop.state import AttemptTiming, RunLoopOptions
+from agent_loop.core.run_loop.summary import format_duration
+
+
+def _print_timing_table(timing: list[AttemptTiming]) -> None:
+    """Print a timing summary table to stderr."""
+    if not timing:
+        return
+
+    rows: list[tuple[str, str, str, str, str]] = []
+    for t in timing:
+        impl = format_duration(t["implement"])
+        chk = format_duration(t["check"])
+        rev = format_duration(t["review"])
+        parts = [v for v in (t["implement"], t["check"], t["review"]) if v is not None]
+        total = format_duration(sum(parts)) if parts else "-"
+        rows.append((str(t["attempt"]), impl, chk, rev, total))
+
+    all_impl = [t["implement"] for t in timing if t["implement"] is not None]
+    all_chk = [t["check"] for t in timing if t["check"] is not None]
+    all_rev = [t["review"] for t in timing if t["review"] is not None]
+    total_impl = format_duration(sum(all_impl)) if all_impl else "-"
+    total_chk = format_duration(sum(all_chk)) if all_chk else "-"
+    total_rev = format_duration(sum(all_rev)) if all_rev else "-"
+    all_vals = all_impl + all_chk + all_rev
+    grand_total = format_duration(sum(all_vals)) if all_vals else "-"
+    rows.append(("Total", total_impl, total_chk, total_rev, grand_total))
+
+    headers = ("Attempt", "Implement", "Check", "Review", "Total")
+    widths = [
+        max(len(headers[i]), *(len(r[i]) for r in rows))
+        for i in range(5)
+    ]
+
+    def sep(left: str, mid: str, right: str, fill: str = "─") -> str:
+        return left + mid.join(fill * (w + 2) for w in widths) + right
+
+    def row_str(vals: tuple[str, ...]) -> str:
+        cells = " │ ".join(v.ljust(w) for v, w in zip(vals, widths))
+        return f"│ {cells} │"
+
+    lines = [
+        sep("┌", "┬", "┐"),
+        row_str(headers),
+        sep("├", "┼", "┤"),
+    ]
+    for i, r in enumerate(rows):
+        if i == len(rows) - 1:
+            lines.append(sep("├", "┼", "┤"))
+        lines.append(row_str(r))
+    lines.append(sep("└", "┴", "┘"))
+
+    sys.stderr.write("\n".join(lines) + "\n")
 
 
 def _resolve_agent_commands(
@@ -224,6 +276,7 @@ def loop_run_command(
         reviewer_model_str=reviewer_model_str,
     )
     completed = run_loop(options)
+    _print_timing_table(completed.timing)
     click.echo(
         f"[INFO] Completed stateless run at {completed.runDir} with status {completed.state.status.value}.",
         err=True,
