@@ -56,7 +56,7 @@ def test_loads_compat_loop_config(tmp_path: Path) -> None:
     assert config.plansDir == "plans"
     assert config.reviewsDir == "reviews"
     assert config.execution.mode == "compat-loop"
-    assert config.execution.defaultProvider.value == "codex"  # type: ignore[union-attr]
+    assert config.execution.defaultProvider.value == "codex"
 
 
 def test_accepts_claude_as_compat_loop_provider(tmp_path: Path) -> None:
@@ -88,7 +88,7 @@ def test_accepts_claude_as_compat_loop_provider(tmp_path: Path) -> None:
 
     config = load_repo_config(str(tmp_path))
     assert config.execution.mode == "compat-loop"
-    assert config.execution.defaultProvider.value == "claude"  # type: ignore[union-attr]
+    assert config.execution.defaultProvider.value == "claude"
 
 
 def test_loads_delegated_config(tmp_path: Path) -> None:
@@ -116,7 +116,7 @@ def test_loads_delegated_config(tmp_path: Path) -> None:
     assert config.plansDir == "plans"
     assert config.reviewsDir == "reviews"
     assert config.execution.mode == "delegated"
-    assert config.execution.provider.value == "codex"  # type: ignore[union-attr]
+    assert config.execution.provider.value == "codex"
 
 
 def test_fails_when_compat_loop_loader_sees_delegated(tmp_path: Path) -> None:
@@ -172,7 +172,7 @@ def test_loads_compat_loop_with_default_provider(tmp_path: Path) -> None:
 
     config = load_repo_config(str(tmp_path))
     assert config.execution.mode == "compat-loop"
-    assert config.execution.defaultProvider.value == "codex"  # type: ignore[union-attr]
+    assert config.execution.defaultProvider.value == "codex"
 
 
 def test_fails_when_repo_config_is_invalid(tmp_path: Path) -> None:

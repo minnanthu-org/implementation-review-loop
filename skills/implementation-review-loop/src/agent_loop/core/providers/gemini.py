@@ -8,7 +8,7 @@ import re
 import sys
 from pathlib import Path
 
-from agent_loop.core.process import CommandExecutionResult, run_shell_command
+from agent_loop.core.process import CommandExecutionResult, run_shell_command, shell_escape
 
 DEFAULT_GEMINI_EXEC_TIMEOUT_MS = 900_000
 
@@ -22,7 +22,7 @@ def build_structured_gemini_command(*, model: str | None = None) -> str:
     ]
 
     if model:
-        parts.append(f"--model {model}")
+        parts.append(f"--model {shell_escape(model)}")
 
     return " ".join(parts)
 
