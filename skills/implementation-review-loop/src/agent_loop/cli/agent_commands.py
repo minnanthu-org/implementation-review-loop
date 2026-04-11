@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from agent_loop.core.process import shell_escape
 from agent_loop.core.repo_config import WorkflowProvider
 
 
@@ -13,7 +14,7 @@ def default_implementer_command(
     """Return the default implementer shell command for *provider*."""
     cmd = f"agent-loop agent run --provider {provider.value} --role implementer"
     if model:
-        cmd += f" --model {model}"
+        cmd += f" --model {shell_escape(model)}"
     return cmd
 
 
@@ -25,5 +26,5 @@ def default_reviewer_command(
     """Return the default reviewer shell command for *provider*."""
     cmd = f"agent-loop agent run --provider {provider.value} --role reviewer"
     if model:
-        cmd += f" --model {model}"
+        cmd += f" --model {shell_escape(model)}"
     return cmd

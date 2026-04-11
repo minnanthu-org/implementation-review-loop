@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import secrets
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
@@ -161,11 +162,17 @@ def update_state(
 
 
 def build_run_id(source_plan_path: str, now: datetime) -> str:
-    """Build a run ID from the plan filename and timestamp."""
+    """Build a run ID from the plan filename, timestamp, and a random suffix.
+
+    The random suffix keeps run IDs unique even when two runs for the same
+    plan start in the same second (e.g., parallel benchmarking, rapid
+    re-invocation).
+    """
     stem = Path(source_plan_path).stem
     plan_base = re.sub(r"[^a-zA-Z0-9]+", "-", stem)
     plan_base = plan_base.strip("-").lower()
-    return f"{format_timestamp(now)}-{plan_base or 'plan'}"
+    suffix = secrets.token_hex(4)
+    return f"{format_timestamp(now)}-{plan_base or 'plan'}-{suffix}"
 
 
 def format_timestamp(now: datetime) -> str:

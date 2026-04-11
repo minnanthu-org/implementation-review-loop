@@ -56,6 +56,10 @@ def initialize_run(options: RunLoopOptions) -> RunResult:
     run_id = build_run_id(resolved.sourcePlanPath, datetime.now(timezone.utc))
     run_dir = str(Path(resolved.runsDir) / run_id)
 
+    # Fail loudly if the run directory already exists — combined with the
+    # random suffix in build_run_id, this makes silent state-mixing on
+    # concurrent or repeated launches impossible.
+    Path(run_dir).mkdir(parents=True, exist_ok=False)
     for sub in ("attempts", "reviews", "responses", "checks"):
         (Path(run_dir) / sub).mkdir(parents=True, exist_ok=True)
 

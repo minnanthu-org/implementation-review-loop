@@ -11,6 +11,7 @@ from unittest.mock import patch
 import pytest
 
 from agent_loop.core.run_loop import RunLoopOptions, initialize_run, run_loop
+from agent_loop.core.run_loop.state import AttemptTiming
 from agent_loop.core.run_loop.summary import format_duration
 
 FIXTURE_DIR = str(Path(__file__).resolve().parent / "fixtures")
@@ -381,7 +382,7 @@ class TestTimingCli:
 
         from agent_loop.cli.run_loop_cmd import _print_timing_table
 
-        timing = [
+        timing: list[AttemptTiming] = [
             {"attempt": 1, "implement": 10.0, "check": 10.0, "review": 10.0},
             {"attempt": 2, "implement": 10.0, "check": 10.0, "review": 10.0},
         ]
@@ -405,7 +406,7 @@ class TestTimingCli:
 
         from agent_loop.cli.run_loop_cmd import _print_timing_table
 
-        timing = [
+        timing: list[AttemptTiming] = [
             {"attempt": 1, "implement": 10.0, "check": None, "review": None},
         ]
 
