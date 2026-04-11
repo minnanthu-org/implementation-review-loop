@@ -7,7 +7,7 @@
 ## 意図の把握
 
 - finding を立てる前に、まず計画書を読み、変更の目的・スコープ・非対象範囲を把握する（計画書は両経路で常に reviewer に渡される）。
-- 直近試行の implementer response の `summaryMd` が意味のある意図説明を含む場合は補足情報として参照する。one-shot review では `summaryMd` が placeholder のため、これ単体を意図源にしない。
+- 直近試行の implementer response の `summaryMd` が意味のある意図説明を含む場合は補足情報として参照する。`code:review`（one-shot）経路では `summaryMd` に固定文言が入るため、これ単体を意図源にしない。
 - 計画書と `summaryMd` を突き合わせ、「事故」と「意図的」を区別してから finding を立てる。
 
 ## レビュー観点
