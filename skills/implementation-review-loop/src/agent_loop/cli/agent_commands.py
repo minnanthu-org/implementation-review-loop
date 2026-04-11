@@ -12,7 +12,11 @@ def default_implementer_command(
     model: str | None = None,
 ) -> str:
     """Return the default implementer shell command for *provider*."""
-    cmd = f"agent-loop agent run --provider {provider.value} --role implementer"
+    cmd = (
+        "agent-loop agent run"
+        f" --provider {shell_escape(provider.value)}"
+        " --role implementer"
+    )
     if model:
         cmd += f" --model {shell_escape(model)}"
     return cmd
@@ -24,7 +28,11 @@ def default_reviewer_command(
     model: str | None = None,
 ) -> str:
     """Return the default reviewer shell command for *provider*."""
-    cmd = f"agent-loop agent run --provider {provider.value} --role reviewer"
+    cmd = (
+        "agent-loop agent run"
+        f" --provider {shell_escape(provider.value)}"
+        " --role reviewer"
+    )
     if model:
         cmd += f" --model {shell_escape(model)}"
     return cmd

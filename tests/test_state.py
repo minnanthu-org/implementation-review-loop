@@ -27,10 +27,15 @@ class TestBuildRunId:
         second = build_run_id(plan, now)
         assert first != second
 
-    def test_suffix_survives_empty_plan_stem(self) -> None:
+    def test_empty_plan_stem_falls_back_to_plan(self) -> None:
+        """All-punctuation stems should collapse to the literal 'plan'."""
         now = datetime(2026, 4, 12, 14, 30, 45, tzinfo=timezone.utc)
-        # All-punctuation stem collapses to empty and falls back to "plan".
         run_id = build_run_id("---.md", now)
         assert "-plan-" in run_id
-        # And is still unique across calls.
-        assert run_id != build_run_id("---.md", now)
+
+    def test_unique_ids_even_for_empty_plan_stem(self) -> None:
+        """Uniqueness must hold for the fallback stem as well."""
+        now = datetime(2026, 4, 12, 14, 30, 45, tzinfo=timezone.utc)
+        first = build_run_id("---.md", now)
+        second = build_run_id("---.md", now)
+        assert first != second
