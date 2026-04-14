@@ -8,7 +8,7 @@ from pathlib import Path
 
 from agent_loop.core.process import CommandExecutionResult, run_shell_command, shell_escape
 
-DEFAULT_CLAUDE_EXEC_TIMEOUT_MS = 900_000
+DEFAULT_CLAUDE_EXEC_TIMEOUT_MS = 3_600_000
 
 
 def build_structured_claude_command(
@@ -24,7 +24,7 @@ def build_structured_claude_command(
         # スキーマ準拠の raw JSON を得るには text が正しい
         "--output-format text",
         "--input-format text",
-        "--permission-mode bypassPermissions",
+        "--permission-mode acceptEdits",
         "--no-session-persistence",
         f"--json-schema {escaped_schema}",
     ]

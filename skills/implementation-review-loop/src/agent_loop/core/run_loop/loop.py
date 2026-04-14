@@ -46,7 +46,7 @@ from agent_loop.core.run_loop.state import (
 )
 from agent_loop.core.run_loop.summary import write_run_summary
 
-DEFAULT_AGENT_COMMAND_TIMEOUT_MS = 1_200_000
+DEFAULT_AGENT_COMMAND_TIMEOUT_MS = 3_600_000
 
 
 def initialize_run(options: RunLoopOptions) -> RunResult:

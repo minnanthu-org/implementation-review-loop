@@ -23,14 +23,18 @@ def run_shell_command(
     stdin_text: str | None = None,
     timeout_ms: int | None = None,
 ) -> CommandExecutionResult:
-    """Run a shell command via ``/bin/zsh -lc`` and capture output."""
+    """Run a shell command via a login shell and capture output."""
+    import shutil
+
+    _shell = shutil.which("zsh") or shutil.which("bash") or "/bin/sh"
+
     timeout_s: float | None = None
     if timeout_ms is not None and timeout_ms > 0:
         timeout_s = timeout_ms / 1000.0
 
     try:
         proc = subprocess.run(
-            ["/bin/zsh", "-lc", command],
+            [_shell, "-lc", command],
             cwd=cwd,
             env=env,
             input=stdin_text,
