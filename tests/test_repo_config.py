@@ -117,6 +117,32 @@ def test_loads_delegated_config(tmp_path: Path) -> None:
     assert config.reviewsDir == "reviews"
     assert config.execution.mode == "delegated"
     assert config.execution.provider.value == "codex"
+    assert config.planReviewerRules is None
+
+
+def test_loads_plan_reviewer_rules_path(tmp_path: Path) -> None:
+    config_dir = Path(os.path.dirname(get_repo_config_path(str(tmp_path))))
+    config_dir.mkdir(parents=True)
+
+    Path(get_repo_config_path(str(tmp_path))).write_text(
+        json.dumps(
+            {
+                "configVersion": 1,
+                "plansDir": "plans",
+                "reviewsDir": "reviews",
+                "planReviewerRules": ".agent-loop/prompts/plan-reviewer-rules.md",
+                "execution": {
+                    "mode": "delegated",
+                    "provider": "codex",
+                },
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_repo_config(str(tmp_path))
+    assert config.planReviewerRules == ".agent-loop/prompts/plan-reviewer-rules.md"
 
 
 def test_fails_when_compat_loop_loader_sees_delegated(tmp_path: Path) -> None:

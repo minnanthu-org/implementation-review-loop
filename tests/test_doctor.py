@@ -132,3 +132,79 @@ def test_fails_when_checks_file_is_missing(tmp_path: Path) -> None:
 
     with pytest.raises(FileNotFoundError, match="Missing checks file"):
         run_doctor(str(tmp_path))
+
+
+def _write_delegated_config_with_rules(tmp_path: Path) -> None:
+    (tmp_path / "docs" / "implementation-plans").mkdir(parents=True)
+    (tmp_path / "docs" / "plan-reviews").mkdir(parents=True)
+    (tmp_path / ".agent-loop").mkdir(parents=True)
+
+    (tmp_path / ".agent-loop" / "config.json").write_text(
+        json.dumps(
+            {
+                "configVersion": 1,
+                "plansDir": "docs/implementation-plans",
+                "reviewsDir": "docs/plan-reviews",
+                "planReviewerRules": ".agent-loop/prompts/plan-reviewer-rules.md",
+                "execution": {
+                    "mode": "delegated",
+                    "provider": "codex",
+                },
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+
+def test_validates_plan_reviewer_rules_file(tmp_path: Path) -> None:
+    _write_delegated_config_with_rules(tmp_path)
+    (tmp_path / ".agent-loop" / "prompts").mkdir(parents=True)
+    (tmp_path / ".agent-loop" / "prompts" / "plan-reviewer-rules.md").write_text(
+        "<!-- rules -->\n", encoding="utf-8"
+    )
+
+    result = run_doctor(str(tmp_path))
+
+    assert (
+        "planReviewerRules (.agent-loop/prompts/plan-reviewer-rules.md)"
+        in result.checked_items
+    )
+
+
+def test_fails_when_plan_reviewer_rules_file_is_missing(tmp_path: Path) -> None:
+    _write_delegated_config_with_rules(tmp_path)
+
+    with pytest.raises(FileNotFoundError, match="planReviewerRules"):
+        run_doctor(str(tmp_path))
+
+
+def test_notes_unreferenced_plan_reviewer_rules_file(tmp_path: Path) -> None:
+    (tmp_path / "docs" / "implementation-plans").mkdir(parents=True)
+    (tmp_path / "docs" / "plan-reviews").mkdir(parents=True)
+    (tmp_path / ".agent-loop" / "prompts").mkdir(parents=True)
+
+    (tmp_path / ".agent-loop" / "config.json").write_text(
+        json.dumps(
+            {
+                "configVersion": 1,
+                "plansDir": "docs/implementation-plans",
+                "reviewsDir": "docs/plan-reviews",
+                "execution": {
+                    "mode": "delegated",
+                    "provider": "codex",
+                },
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / ".agent-loop" / "prompts" / "plan-reviewer-rules.md").write_text(
+        "## 絶対制約\n", encoding="utf-8"
+    )
+
+    result = run_doctor(str(tmp_path))
+
+    assert any(
+        item.startswith("planReviewerRules: unset") for item in result.checked_items
+    )

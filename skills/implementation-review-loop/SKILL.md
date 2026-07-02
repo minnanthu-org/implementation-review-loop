@@ -69,6 +69,8 @@ loop-run モードでは `--implementer-model` / `--reviewer-model` で個別指
 3. 出力されたレビュー結果のパスと verdict を報告する。
 4. 途中で失敗した場合は、失敗したコマンドと原因を要約して止まる。
 
+補足: プロジェクト固有の plan review ルールは、config の `planReviewerRules` が指すファイル（既定: `.agent-loop/prompts/plan-reviewer-rules.md`）に記述するとレビュープロンプトに注入される（雛形のコメントのみの場合は注入されない）。config にこのキーが無いリポジトリではファイルに書いても注入されない。`agent-loop doctor` が「ルールファイルはあるが config が参照していない」と報告した場合は、`.agent-loop/config.json` への `planReviewerRules` の追記をユーザーに提案する。
+
 ## Procedure: loop-run
 
 1. 現在のリポジトリに `.agent-loop/config.json` が無ければ、`uv run --directory "${CLAUDE_SKILL_DIR}" agent-loop init --repo "$PWD" --mode compat-loop --provider <self>` を実行する。

@@ -24,6 +24,17 @@ cp -r skills/implementation-review-loop /path/to/your-repo/.claude/skills/implem
 docs/implementation-plans/my-plan.md の計画を codex でレビューして
 ```
 
+プロジェクト固有のレビュールール (絶対制約、AC の対応付けなど) は、config の
+`planReviewerRules` が指すファイル (既定: `.agent-loop/prompts/plan-reviewer-rules.md`)
+に記述する。`init` で雛形ファイルと config のキー設定の両方が生成される。
+この機能より前に init したリポジトリは config にキーが無いため、
+`.agent-loop/config.json` に `planReviewerRules` を追記しない限り、ファイルに
+ルールを書いても注入されない (`doctor` が未参照のルールファイルを検出して知らせる)。
+HTML コメントは注入前に除去されるため、雛形のままなら共通プロンプトだけで
+レビューされる。機能を使わない場合はファイルを消すのではなく config から
+`planReviewerRules` キーを削除する (キーを残したままファイルを削除すると
+plan review と doctor が失敗する)。
+
 ### 実装とレビューの反復ループ
 
 ```

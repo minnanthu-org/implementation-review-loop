@@ -9,6 +9,7 @@
     "reviewer": ".agent-loop/prompts/code-reviewer.md"
   },
   "checksFile": ".agent-loop/checks.json",
+  "planReviewerRules": ".agent-loop/prompts/plan-reviewer-rules.md",
   "execution": {
     "mode": "compat-loop",
     "defaultProvider": "codex"

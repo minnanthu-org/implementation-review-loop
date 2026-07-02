@@ -16,6 +16,9 @@ class WorkflowProvider(str, Enum):
     GEMINI = "gemini"
 
 
+DEFAULT_PLAN_REVIEWER_RULES_PATH = ".agent-loop/prompts/plan-reviewer-rules.md"
+
+
 # --- Config schemas ---
 
 
@@ -45,6 +48,7 @@ class CompatLoopRepoConfig(BaseModel):
     prompts: CompatLoopPrompts
     checksFile: Annotated[str, Field(min_length=1)]
     execution: CompatLoopExecution
+    planReviewerRules: str | None = None
 
 
 class DelegatedRepoConfig(BaseModel):
@@ -52,6 +56,7 @@ class DelegatedRepoConfig(BaseModel):
     plansDir: Annotated[str, Field(min_length=1)]
     reviewsDir: Annotated[str, Field(min_length=1)]
     execution: DelegatedExecution
+    planReviewerRules: str | None = None
 
 
 RepoConfig = Union[CompatLoopRepoConfig, DelegatedRepoConfig]
