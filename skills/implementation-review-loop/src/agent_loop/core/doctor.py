@@ -8,6 +8,7 @@ from pathlib import Path
 from agent_loop.core.checks import load_checks_config
 from agent_loop.core.providers import is_provider_available
 from agent_loop.core.repo_config import (
+    DEFAULT_PLAN_REVIEWER_RULES_PATH,
     CompatLoopRepoConfig,
     RepoConfig,
     WorkflowProvider,
@@ -45,6 +46,20 @@ def run_doctor(repo_path: str) -> DoctorResult:
             f"reviewsDir ({repo_config.reviewsDir})",
         ),
     ]
+
+    if repo_config.planReviewerRules:
+        checked_items.append(
+            _assert_file_exists(
+                str(Path(resolved_repo_path) / repo_config.planReviewerRules),
+                f"planReviewerRules ({repo_config.planReviewerRules})",
+            )
+        )
+    elif (Path(resolved_repo_path) / DEFAULT_PLAN_REVIEWER_RULES_PATH).is_file():
+        checked_items.append(
+            f"planReviewerRules: unset — {DEFAULT_PLAN_REVIEWER_RULES_PATH} exists "
+            "but is not referenced by config, so it is never injected; add "
+            '"planReviewerRules" to .agent-loop/config.json to enable it'
+        )
 
     if repo_config.execution.mode == "compat-loop":
         compat_config = CompatLoopRepoConfig.model_validate(repo_config.model_dump())

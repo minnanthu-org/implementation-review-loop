@@ -25,11 +25,20 @@ class TestInitializeRepository:
             tmp_path / "docs" / "implementation-plans" / "TEMPLATE.md"
         ).read_text(encoding="utf-8")
 
+        rules_template = (
+            tmp_path / ".agent-loop" / "prompts" / "plan-reviewer-rules.md"
+        ).read_text(encoding="utf-8")
+
         assert result.mode == "compat-loop"
         assert result.provider == WorkflowProvider.CODEX
         assert config["execution"]["mode"] == "compat-loop"
         assert config["execution"]["defaultProvider"] == "codex"
+        assert (
+            config["planReviewerRules"]
+            == ".agent-loop/prompts/plan-reviewer-rules.md"
+        )
         assert checks["commands"] == []
+        assert "plan review ルール" in rules_template
         assert "# 実装計画書テンプレート" in plan_template
         assert len(result.created_files) > 0
 
@@ -48,6 +57,13 @@ class TestInitializeRepository:
         assert result.provider == WorkflowProvider.CLAUDE
         assert config["execution"]["mode"] == "delegated"
         assert config["execution"]["provider"] == "claude"
+        assert (
+            config["planReviewerRules"]
+            == ".agent-loop/prompts/plan-reviewer-rules.md"
+        )
+        assert (
+            tmp_path / ".agent-loop" / "prompts" / "plan-reviewer-rules.md"
+        ).is_file()
         assert not any(f.endswith("checks.json") for f in result.created_files)
 
     def test_skips_files_that_already_exist(self, tmp_path: Path) -> None:

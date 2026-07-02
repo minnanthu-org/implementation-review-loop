@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 import tempfile
 from dataclasses import dataclass
@@ -69,6 +70,7 @@ def run_plan_review(
     plan_contents = Path(resolved_plan).read_text(encoding="utf-8")
     prompt_template = Path(prompt_path).read_text(encoding="utf-8")
     output_schema = Path(schema_path).read_text(encoding="utf-8")
+    project_rules = load_plan_reviewer_rules(resolved_repo, repo_config)
 
     plan_path_relative = str(
         Path(resolved_plan).relative_to(resolved_repo)
@@ -80,6 +82,7 @@ def run_plan_review(
         prompt_template=prompt_template,
         repo_config=repo_config,
         output_schema=output_schema,
+        project_rules=project_rules,
     )
 
     temp_dir = tempfile.mkdtemp(prefix="agent-loop-plan-review-")
@@ -193,6 +196,32 @@ def render_plan_review_record(
     return "\n".join(lines) + "\n"
 
 
+def load_plan_reviewer_rules(
+    repo_path: str, repo_config: RepoConfig
+) -> str | None:
+    """Load project-specific plan review rules if configured.
+
+    Returns None when the config does not set ``planReviewerRules`` or when
+    the file contains only HTML comments (the untouched scaffolding template).
+    """
+    if not repo_config.planReviewerRules:
+        return None
+
+    rules_path = Path(repo_path) / repo_config.planReviewerRules
+    if not rules_path.is_file():
+        raise FileNotFoundError(
+            f"Missing planReviewerRules file: {rules_path}"
+        )
+
+    contents = rules_path.read_text(encoding="utf-8")
+    stripped = re.sub(r"<!--.*?-->", "", contents, flags=re.DOTALL).strip()
+    if "<!--" in stripped or "-->" in stripped:
+        raise ValueError(
+            f"Unbalanced HTML comment marker in planReviewerRules file: {rules_path}"
+        )
+    return stripped or None
+
+
 def build_plan_review_prompt(
     *,
     plan_contents: str,
@@ -200,12 +229,25 @@ def build_plan_review_prompt(
     prompt_template: str,
     repo_config: RepoConfig,
     output_schema: str,
+    project_rules: str | None = None,
 ) -> str:
     """Build the plan review prompt."""
     repo_config_json = json.dumps(repo_config.model_dump(), indent=2)
 
+    project_rules_sections = (
+        [
+            "## プロジェクト固有レビュールール",
+            "以下は本リポジトリ固有の追加レビュールールです。"
+            "上記の一般則と衝突する場合はこちらを優先してください。",
+            project_rules.strip(),
+        ]
+        if project_rules
+        else []
+    )
+
     return "\n\n".join([
         prompt_template.strip(),
+        *project_rules_sections,
         "## 対象計画書パス",
         plan_path,
         "## 対象計画書",
